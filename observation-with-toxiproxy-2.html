@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Chaos Engineering Summary</title>
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --accent-color: #10b981; /* Emerald Green */
+            --accent-blue: #38bdf8;
+            --border-color: #334155;
+            --code-bg: #090d16;
+            --code-text: #a5b4fc;
+            --table-header: #064e3b;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f8fafc;
+            --text-color: #0f172a;
+            --panel-bg: #ffffff;
+            --accent-color: #059669;
+            --accent-blue: #0284c7;
+            --border-color: #cbd5e1;
+            --code-bg: #f1f5f9;
+            --code-text: #1e40af;
+            --table-header: #d1fae5;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--accent-color); }
+        h2 { color: var(--accent-blue); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        h3 { color: var(--accent-color); }
+
+        .nav-controls { display: flex; gap: 1rem; align-items: center; }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { color: var(--accent-color); }
+        .tab-btn.active { border-bottom-color: var(--accent-color); color: var(--accent-color); }
+
+        .theme-toggle {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .code-wrapper { position: relative; margin: 1rem 0; }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95em; }
+        th, td { padding: 12px; text-align: left; border: 1px solid var(--border-color); }
+        th { background-color: var(--table-header); color: var(--text-color); font-weight: bold; }
+        
+        .syntax-box {
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 2rem;
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: var(--code-text);
+        }
+
+        ul li { margin-bottom: 0.5rem; }
+        strong { color: var(--accent-blue); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Kafka Deep Dive Summary</h1>
+        <div class="nav-controls">
+            <button class="tab-btn active" onclick="openTab(event, 'findings')">1. Core Findings & Traps</button>
+            <button class="tab-btn" onclick="openTab(event, 'toxiproxy')">2. Toxiproxy CLI Guide</button>
+            <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- ============================================== -->
+        <!-- TAB 1: CORE FINDINGS                           -->
+        <!-- ============================================== -->
+        <div id="findings" class="tab-content active">
+            
+            <div class="card">
+                <h2>1. The Advertised Listeners Bypass Trap</h2>
+                <p><strong>The Illusion:</strong> Traffic appears to bypass Toxiproxy completely after the first successful metadata fetch.</p>
+                <p><strong>The Reality:</strong> Kafka clusters hand out routing instructions. When Spring Boot asks the broker (via Toxiproxy at <code>19092</code>) for partition leaders, the broker replies with its default <code>EXTERNAL</code> address (<code>localhost:9092</code>). Spring Boot caches this and sends all subsequent payloads directly to the broker, effectively circumventing the chaos proxy.</p>
+                <p><strong>The Fix:</strong> The broker's <code>KAFKA_ADVERTISED_LISTENERS</code> must be hardcoded to tell external clients to communicate strictly over the Toxiproxy port (<code>EXTERNAL://localhost:19092</code>).</p>
+            </div>
+
+            <div class="card">
+                <h2>2. The Metadata Primer vs. Delivery Umbrella</h2>
+                <p><strong>The Illusion:</strong> A 10-second <code>delivery.timeout.ms</code> kill switch hangs for 60 seconds.</p>
+                <p><strong>The Reality:</strong> The <code>delivery.timeout.ms</code> overarching timer <em>does not start</em> until a payload successfully enters the <code>RecordAccumulator</code> buffer. If the producer does not have topic metadata cached, it must fetch it over the network first. If the network drops during this metadata fetch, the payload is stuck outside the buffer on the application thread. It waits for the <code>max.block.ms</code> timer (default 60s) to expire before throwing a <code>TimeoutException: Topic not present in metadata</code>.</p>
+                <p><strong>The Rule:</strong> To accurately test network flight timeouts, you must "prime the pump" by sending one successful message to cache the metadata before activating network blackholes.</p>
+            </div>
+
+            <div class="card">
+                <h2>3. The Garbage Collection Tax (Dynamic Allocation)</h2>
+                <p><strong>The Illusion:</strong> Payloads larger than <code>batch.size</code> but smaller than <code>buffer.memory</code> cause no errors and are sent successfully.</p>
+                <p><strong>The Reality:</strong> Kafka bypasses the standard, highly-efficient pre-allocated memory pool for these messages. It dynamically allocates a one-off chunk of unpooled RAM specifically for the giant payload, sends it, and instantly orphans the memory chunk. Under high throughput, this triggers severe JVM Garbage Collection spikes and CPU thrashing.</p>
+            </div>
+
+            <div class="card">
+                <h2>4. Buffer Exhaustion Triggers</h2>
+                <p><strong>The Mechanism:</strong> <code>BufferExhaustedException</code> is a strict, edge-case error. It only occurs if <code>buffer.memory</code> is 100% full <strong>AND</strong> <code>max.block.ms</code> is explicitly set to <code>0</code>. If <code>max.block.ms</code> is greater than zero, the producer politely pauses the calling thread to wait for space. If the stopwatch hits zero, it throws a generic <code>TimeoutException</code> instead.</p>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: TOXIPROXY CLI                           -->
+        <!-- ============================================== -->
+        <div id="toxiproxy" class="tab-content">
+            <div class="card">
+                <h2>Toxiproxy CLI Command Structure</h2>
+                <p>The Toxiproxy CLI utilizes a consistent syntax pattern for injecting "toxics" (network degradation conditions) into active proxy routes.</p>
+                
+                <div class="syntax-box">
+                    ./toxiproxy-cli toxic add -n [NAME] -t [TYPE] -a [KEY=VALUE] -[DIRECTION] [PROXY_NAME]
+                </div>
+
+                <h3>Parameter Breakdown</h3>
+                <ul>
+                    <li><strong>-n (Name):</strong> A custom label (e.g., <code>ack_blackhole</code>) used to target and delete this specific toxic later.</li>
+                    <li><strong>-t (Type):</strong> The behavior to inject (<code>latency</code>, <code>bandwidth</code>, <code>timeout</code>, <code>limit_data</code>, <code>slicer</code>).</li>
+                    <li><strong>-a (Attribute):</strong> The mathematical value for the toxic behavior (e.g., <code>latency=15000</code>).</li>
+                    <li><strong>-d / -u (Direction):</strong> Boolean flags. <code>-d</code> applies the effect to <em>downstream</em> traffic (Broker to Client), while <code>-u</code> applies to <em>upstream</em> traffic (Client to Broker).</li>
+                    <li><strong>Proxy Name:</strong> The target routing tunnel established in the daemon (e.g., <code>kafka-proxy</code>).</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Chaos Injection Cheat Sheet</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scenario to Test</th>
+                            <th>Target Configs</th>
+                            <th>CLI Command</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>The Blackhole</strong><br>(Hold ACKs Hostage)</td>
+                            <td><code>request.timeout.ms</code><br><code>delivery.timeout.ms</code></td>
+                            <td><code>./toxiproxy-cli toxic add -n latency_spike -t latency -a latency=15000 -d kafka-proxy</code></td>
+                            <td>Producer sends message instantly but waits 15s for the ACK. Fails via the 10s overarching <code>delivery</code> umbrella timer.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Buffer Exhaustion</strong><br>(Severe Network Choke)</td>
+                            <td><code>buffer.memory</code><br><code>max.block.ms</code></td>
+                            <td><code>./toxiproxy-cli toxic add -n choke_pipe -t bandwidth -a rate=15 -u kafka-proxy</code></td>
+                            <td>Producer writes to RAM faster than the network can clear it. RAM fills to 100%, thread blocks for 60s, then throws <code>TimeoutException</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Idempotence Test</strong><br>(Silent Drops)</td>
+                            <td><code>enable.idempotence</code><br><code>acks=all</code></td>
+                            <td><code>./toxiproxy-cli toxic add -n drop_acks -t timeout -a timeout=0 -d kafka-proxy</code></td>
+                            <td>Broker commits data to disk but network drops the ACK. Producer retries. Broker recognizes PID/Sequence, avoids duplicating data, and re-ACKs.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Remove Toxic</strong><br>(Restore Network)</td>
+                            <td>N/A</td>
+                            <td><code>./toxiproxy-cli toxic remove -n latency_spike kafka-proxy</code></td>
+                            <td>Instantly removes the specified toxic and restores 100% healthy traffic flow to the proxy connection.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inspect State</strong></td>
+                            <td>N/A</td>
+                            <td><code>./toxiproxy-cli inspect kafka-proxy</code></td>
+                            <td>Displays the active upstream/downstream mappings and lists all currently running toxics on the proxy.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- --- JavaScript --- -->
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+        }
+
+        function openTab(evt, tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>

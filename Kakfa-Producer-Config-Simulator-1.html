@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Memory & Thread Simulator (Updated)</title>
+    <style>
+        :root {
+            --bg-main: #0a0e17;
+            --bg-panel: #111827;
+            --accent-blue: #0ea5e9;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --font-mono: "Courier New", Courier, monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        h1, h2, h3 { color: var(--accent-blue); margin-top: 0; }
+        
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .input-group {
+            margin-bottom: 1.2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .input-group input, .input-group select {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.8rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .btn {
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover { background: #0284c7; }
+
+        #result-box {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 4px;
+            background: var(--bg-main);
+            border-left: 4px solid var(--border-color);
+            font-family: var(--font-mono);
+            min-height: 80px;
+        }
+
+        .success { color: var(--accent-green); font-weight: bold; }
+        .error { color: var(--accent-red); font-weight: bold; }
+        .warning { color: var(--accent-orange); font-weight: bold; }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .node {
+            background: var(--bg-main);
+            border: 2px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 6px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .node.decision {
+            border-color: var(--accent-orange);
+            border-radius: 20px;
+        }
+
+        .node.terminal-err { border-color: var(--accent-red); color: var(--accent-red); font-weight: bold; }
+        .node.terminal-succ { border-color: var(--accent-green); color: var(--accent-green); font-weight: bold; }
+
+        .arrow-down {
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            line-height: 1;
+            z-index: 1;
+        }
+
+        .branch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            gap: 1rem;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- SIMULATOR -->
+        <div class="panel">
+            <h2>Producer Config Simulator</h2>
+
+            <div class="input-group">
+                <label>batch.size (Bytes)</label>
+                <input type="number" id="sim-batch" value="16384">
+            </div>
+
+            <div class="input-group">
+                <label>buffer.memory (Bytes)</label>
+                <input type="number" id="sim-buffer" value="33554432">
+            </div>
+
+            <div class="input-group">
+                <label>max.request.size (Bytes)</label>
+                <input type="number" id="sim-request" value="1048576">
+            </div>
+
+            <div class="input-group">
+                <label>max.block.ms (Wait time)</label>
+                <input type="number" id="sim-block" value="0">
+            </div>
+
+            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+
+            <div class="input-group">
+                <label>Incoming Payload Size (Bytes)</label>
+                <input type="number" id="sim-payload" value="5000">
+            </div>
+
+            <div class="input-group">
+                <label>Current Buffer State</label>
+                <select id="sim-state">
+                    <option value="empty">Healthy (Space Available)</option>
+                    <option value="full" selected>100% Full (Waiting on Network)</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="runSimulation()">Inject Payload</button>
+
+            <div id="result-box">
+                // System idle. Awaiting payload injection...
+            </div>
+        </div>
+
+        <!-- FLOWCHART -->
+        <div class="panel">
+            <h2>Execution Flowchart</h2>
+            
+            <div class="flowchart">
+                <div class="node"><strong>Start:</strong> send(payload)</div>
+                <div class="arrow-down">↓</div>
+                
+                <div class="node decision">1. Is <code>batch.size</code> > <code>buffer.memory</code>?</div>
+                <div class="branch" style="grid-template-columns: 1fr 5fr;">
+                    <div style="text-align: right; padding-right: 10px; color: var(--accent-red);">Yes →</div>
+                    <div class="node terminal-err">IllegalArgumentException</div>
+                </div>
+                <div class="arrow-down">↓ No</div>
+
+                <div class="node decision">2. Is <code>payload</code> > <code>max.request.size</code>?</div>
+                <div class="branch" style="grid-template-columns: 1fr 5fr;">
+                    <div style="text-align: right; padding-right: 10px; color: var(--accent-red);">Yes →</div>
+                    <div class="node terminal-err">RecordTooLargeException (Gatekeeper)</div>
+                </div>
+                <div class="arrow-down">↓ No</div>
+
+                <div class="node decision">3. Is <code>payload</code> > <code>buffer.memory</code>?</div>
+                <div class="branch" style="grid-template-columns: 1fr 5fr;">
+                    <div style="text-align: right; padding-right: 10px; color: var(--accent-red);">Yes →</div>
+                    <div class="node terminal-err">RecordTooLargeException (Accumulator)</div>
+                </div>
+                <div class="arrow-down">↓ No</div>
+
+                <div class="node decision">4. Is Buffer Memory 100% Full?</div>
+                <div class="branch" style="grid-template-columns: 1fr 5fr;">
+                    <div style="text-align: right; padding-right: 10px; color: var(--accent-red);">Yes →</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div class="node terminal-err" style="font-size: 0.85rem; padding: 0.5rem;">TimeoutException<br><span style="color:var(--text-muted); font-weight:normal;">If max.block.ms > 0</span></div>
+                        <div class="node terminal-err" style="font-size: 0.85rem; padding: 0.5rem;">BufferExhaustedException<br><span style="color:var(--text-muted); font-weight:normal;">If max.block.ms = 0</span></div>
+                    </div>
+                </div>
+                <div class="arrow-down">↓ No</div>
+
+                <div class="node decision">5. Is <code>payload</code> > <code>batch.size</code>?</div>
+                <div class="branch">
+                    <div>
+                        <div style="text-align: center; color: var(--accent-green); margin-bottom: 5px;">Yes</div>
+                        <div class="node terminal-succ" style="font-size: 0.9rem;">
+                            SUCCESS:<br>Dynamic Unpooled Allocation
+                        </div>
+                    </div>
+                    <div>
+                        <div style="text-align: center; color: var(--accent-green); margin-bottom: 5px;">No</div>
+                        <div class="node terminal-succ" style="font-size: 0.9rem;">
+                            SUCCESS:<br>Standard Batch Allocation
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function runSimulation() {
+            const batchSize = parseInt(document.getElementById('sim-batch').value);
+            const bufferMemory = parseInt(document.getElementById('sim-buffer').value);
+            const requestSize = parseInt(document.getElementById('sim-request').value);
+            const maxBlockMs = parseInt(document.getElementById('sim-block').value);
+            const payload = parseInt(document.getElementById('sim-payload').value);
+            const state = document.getElementById('sim-state').value;
+            
+            const resultBox = document.getElementById('result-box');
+
+            if (batchSize > bufferMemory) {
+                resultBox.innerHTML = `<span class="error">Exception: IllegalArgumentException</span><br><br>The KafkaProducer failed to initialize. You cannot configure a batch.size (${batchSize}) that is larger than your total buffer.memory (${bufferMemory}).`;
+                return;
+            }
+
+            if (payload > requestSize) {
+                resultBox.innerHTML = `<span class="error">Exception: RecordTooLargeException</span><br><br>The payload (${payload} bytes) was rejected immediately before entering RAM. It exceeds the max.request.size limit of ${requestSize} bytes.`;
+                return;
+            }
+
+            if (payload > bufferMemory) {
+                resultBox.innerHTML = `<span class="error">Exception: RecordTooLargeException</span><br><br>The payload passed the gatekeeper, but it is physically larger (${payload} bytes) than the entire allocated JVM buffer.memory (${bufferMemory} bytes).`;
+                return;
+            }
+
+            // The Expanded Buffer Exhaustion Logic
+            if (state === 'full') {
+                if (maxBlockMs === 0) {
+                    resultBox.innerHTML = `<span class="error">Exception: BufferExhaustedException</span><br><br>The buffer.memory is full and max.block.ms is set to 0. The producer instantly rejected the message because it is strictly configured not to block and wait for network clearance.`;
+                } else {
+                    resultBox.innerHTML = `<span class="error">Exception: TimeoutException</span><br><br>The buffer.memory is full. The thread blocked for ${maxBlockMs}ms waiting for network clearance. The stopwatch expired before memory became available.`;
+                }
+                return;
+            }
+
+            if (payload > batchSize) {
+                resultBox.innerHTML = `<span class="warning">SUCCESS: Dynamic Unpooled Allocation</span><br><br>Message Accepted. Because the payload (${payload} bytes) is larger than the batch.size (${batchSize} bytes), it bypasses the standard memory pool. Kafka dynamically allocated a one-off chunk of memory to hold this message.`;
+                return;
+            }
+
+            resultBox.innerHTML = `<span class="success">SUCCESS: Standard Batch Allocation</span><br><br>Message Accepted. The payload (${payload} bytes) fits perfectly into the pre-allocated ${batchSize} byte batch pool inside the RecordAccumulator. Optimal efficiency achieved.`;
+        }
+    </script>
+</body>
+</html>

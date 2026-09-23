@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Producer Configuration Vault</title>
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --bg-panel: #111827;
+            --neon-blue: #00f0ff;
+            --neon-green: #39ff14;
+            --neon-red: #ff003c;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(0, 240, 255, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        #navigator {
+            width: 300px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--neon-blue);
+            box-shadow: 4px 0 15px var(--border-glow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        #navigator h1 {
+            color: var(--neon-blue);
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .nav-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:hover {
+            color: var(--neon-blue);
+            border-color: var(--neon-blue);
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        .nav-btn.active {
+            color: var(--neon-green);
+            border-color: var(--neon-green);
+            background: rgba(57, 255, 20, 0.05);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.2) inset;
+        }
+
+        /* Main Content Area */
+        #content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--text-muted);
+            padding-bottom: 10px;
+        }
+
+        .header-stats span {
+            color: var(--neon-green);
+            font-family: monospace;
+            font-size: 1.2rem;
+        }
+
+        /* Question Cards */
+        .q-card {
+            background-color: var(--bg-panel);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .q-card:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px var(--border-glow);
+        }
+
+        .q-title {
+            font-size: 1.3rem;
+            color: #fff;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .q-title span {
+            color: var(--neon-blue);
+            margin-right: 10px;
+        }
+
+        /* The Reveal Mechanism */
+        .answer-container {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #475569;
+        }
+
+        .answer-text {
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-size: 1.05rem;
+            /* Encrypted State */
+            filter: blur(8px);
+            opacity: 0.4;
+            user-select: none;
+            transition: all 0.5s ease-out;
+        }
+
+        .answer-text code {
+            background: #1e293b;
+            color: var(--neon-green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .q-card.decrypted .answer-text {
+            filter: blur(0);
+            opacity: 1;
+            user-select: auto;
+            color: var(--text-main);
+        }
+
+        .decrypt-btn {
+            background: var(--bg-base);
+            color: var(--neon-red);
+            border: 1px solid var(--neon-red);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 1rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            text-transform: uppercase;
+        }
+
+        .decrypt-btn:hover {
+            background: rgba(255, 0, 60, 0.1);
+            box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+        }
+
+        .q-card.decrypted .decrypt-btn {
+            color: var(--neon-green);
+            border-color: var(--neon-green);
+        }
+        .q-card.decrypted .decrypt-btn:hover {
+            background: rgba(57, 255, 20, 0.1);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-blue); }
+    </style>
+</head>
+<body>
+
+    <div id="navigator">
+        <h1>[SYS] KAFKA_VAULT</h1>
+        <div id="nav-buttons">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <div id="content">
+        <div class="header-stats">
+            <h2 id="current-category">INITIATING DECRYPT...</h2>
+            <span id="q-counter">0 / 51 RECORDS</span>
+        </div>
+        <div id="questions-container">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <script>
+        // The Master Database of 51 Architectural Questions
+        const database = [
+            // CATEGORY: CORE MECHANICS
+            { cat: "Core Mechanics", q: "What is the true purpose of `bootstrap.servers` if the producer ultimately connects to the partition leader?", a: "The `bootstrap.servers` list is only used for the initial connection to fetch cluster metadata. Once connected to *any* broker in this list, the producer downloads the routing table (which broker leads which partition) and makes subsequent direct TCP connections to the specific leader brokers." },
+            { cat: "Core Mechanics", q: "Why is setting `acks=all` not enough to guarantee zero data loss on the broker?", a: "`acks=all` only guarantees the message is written to all *in-sync replicas* (ISRs). If `min.insync.replicas` on the topic is set to 1, and the leader is the only node up, `acks=all` succeeds. If that leader crashes, the data is lost. You must pair `acks=all` with `min.insync.replicas=2`." },
+            { cat: "Core Mechanics", q: "What happens if a producer sends a message with a `null` key?", a: "If the key is null, the default partitioner uses a Round-Robin (Kafka 2.4+) or Sticky Partitioning strategy. It will batch messages and distribute them evenly across all available partitions, entirely sacrificing ordering guarantees." },
+            { cat: "Core Mechanics", q: "How does `acks=0` impact producer throughput and reliability?", a: "With `acks=0`, the producer fires the message into the TCP socket and immediately considers it successful without waiting for the broker to reply. Throughput is absolute maximum, but if the broker drops the packet or crashes, the producer has no idea, resulting in silent data loss." },
+            { cat: "Core Mechanics", q: "What is the architectural purpose of `client.id`?", a: "It is a logical identifier used primarily for tracking, logging, and metrics. More importantly, brokers use `client.id` to apply quota limits (network bandwidth/request rates) to specific applications to prevent noisy neighbor scenarios." },
+            { cat: "Core Mechanics", q: "Can a producer change its `key.serializer` dynamically at runtime?", a: "No. Serializers are instantiated once when the `KafkaProducer` is constructed. Changing them requires destroying the producer instance and creating a new one, as the network threads rely on immutable serialization logic." },
+            { cat: "Core Mechanics", q: "What is the risk of using `StringSerializer` for complex JSON objects?", a: "While possible, it shifts the JSON serialization burden onto your application thread before calling `send()`. Using a dedicated `KafkaJsonSerializer` integrates with the framework, allows schema validation (via Schema Registry), and handles byte conversion more efficiently." },
+            { cat: "Core Mechanics", q: "Why did Kafka 3.x change the default `acks` setting?", a: "Prior to 3.0, default was `acks=1` (leader only). It was changed to `acks=all` to prioritize data durability by default over raw throughput, protecting developers from accidental data loss in failover scenarios." },
+            { cat: "Core Mechanics", q: "What triggers a producer to refresh its metadata?", a: "Metadata is refreshed in three scenarios: 1) On startup, 2) When `metadata.max.age.ms` expires (default 5 mins), or 3) When the producer receives an error indicating a leadership change (e.g., `NotLeaderOrFollowerException`)." },
+            { cat: "Core Mechanics", q: "Why does the producer use byte arrays (`byte[]`) over the wire instead of Java objects?", a: "Byte arrays are stack-agnostic and language-independent. The Kafka broker is completely oblivious to the data type (String, Avro, JSON); it only stores and replicates raw bytes, keeping the broker highly performant and decoupling producers from consumers." },
+
+            // CATEGORY: BATCHING & PERFORMANCE
+            { cat: "Batching & Performance", q: "How do `batch.size` and `linger.ms` interact to determine when a payload is sent?", a: "They act as an 'OR' condition. The producer's network thread will send the batch if the data in the batch reaches `batch.size` (in bytes) OR if the time the first message has been waiting reaches `linger.ms`, whichever happens first." },
+            { cat: "Batching & Performance", q: "What happens if you set `linger.ms=0` (the old default)?", a: "The producer attempts to send the message over the network immediately. Under high load, this causes massive network chatter, tiny packet sizes, high CPU utilization on the broker, and completely nullifies the benefits of compression." },
+            { cat: "Batching & Performance", q: "Does `batch.size` apply per-producer, per-topic, or per-partition?", a: "It applies **per-partition**. If `batch.size` is 16KB and you are sending data to 10 partitions, the producer could potentially allocate 160KB of RAM in the buffer to hold inflight batches." },
+            { cat: "Batching & Performance", q: "How does `compression.type=snappy` affect `batch.size`?", a: "`batch.size` counts the *uncompressed* bytes. The producer batches the raw records until `batch.size` is hit, and *then* applies the compression algorithm to the entire batch before sending it over the network." },
+            { cat: "Batching & Performance", q: "What is the danger of setting `batch.size` excessively high (e.g., 50MB)?", a: "Because memory is allocated upfront, a high batch size combined with hundreds of partitions will rapidly exhaust the producer's `buffer.memory` limit, causing JVM memory pressure or blocking threads, even if the traffic volume is low." },
+            { cat: "Batching & Performance", q: "What is the architectural trade-off between `lz4` and `zstd` compression?", a: "`lz4` offers incredible speed with moderate compression, prioritizing low CPU usage. `zstd` provides massive compression ratios (saving significant network and AWS storage costs) but requires much more CPU compute on both the producer and consumer." },
+            { cat: "Batching & Performance", q: "If `linger.ms` is 100ms, does it guarantee exactly 100ms of latency?", a: "No, it adds a *maximum* artificial delay of 100ms. If the `batch.size` limit is reached in 2ms due to high traffic, the batch is sent immediately at 2ms. It is a ceiling, not a floor." },
+            { cat: "Batching & Performance", q: "Why would `buffer.memory` fill up if the Kafka cluster is perfectly healthy?", a: "If your application produces data (calls `send()`) faster than the physical network bandwidth can transmit it, the backlog is held in `buffer.memory`. Once full, `send()` calls will block." },
+            { cat: "Batching & Performance", q: "What is the difference between producer `max.request.size` and broker `message.max.bytes`?", a: "`max.request.size` is the client-side limit; the producer rejects large payloads before hitting the network. `message.max.bytes` is the broker limit. If the producer limit is higher than the broker limit, the broker will sever the connection when a large payload arrives." },
+            { cat: "Batching & Performance", q: "How can you tangibly prove your producer compression is working?", a: "You cannot trust consumer UI tools (like Offset Explorer) because they decompress data in RAM. You must `exec` into the Docker broker and run `kafka-dump-log.sh` against the physical `.log` file and look for the `compresscodec` flag." },
+
+            // CATEGORY: TIMEOUTS & THREAD LOCKS
+            { cat: "Timeouts & Thread Locks", q: "What are the only two scenarios that cause `max.block.ms` to start ticking?", a: "The `send()` thread blocks *only* when: 1) The producer is waiting to fetch cluster metadata to route the message, or 2) The `buffer.memory` is completely full and it is waiting for the network to clear space." },
+            { cat: "Timeouts & Thread Locks", q: "Why is the default `max.block.ms` (60,000ms) dangerous for a Spring Boot REST API?", a: "If Kafka goes down, every HTTP request hitting `kafkaTemplate.send()` will freeze for 60 seconds. A pool of 200 Tomcat threads will be exhausted in seconds, crashing the entire web application and returning 502 Bad Gateway to users." },
+            { cat: "Timeouts & Thread Locks", q: "How does `delivery.timeout.ms` act as an 'umbrella'?", a: "It dictates the absolute maximum lifecycle of a message. It encompasses the time spent in the buffer (`linger.ms`), the initial network flight, the backoff wait, and all subsequent retries. When it hits zero, the message is permanently dropped." },
+            { cat: "Timeouts & Thread Locks", q: "What happens if `request.timeout.ms` is set higher than `delivery.timeout.ms`?", a: "This is a configuration error. The single network flight would outlive the global lifecycle timer. The producer will usually fail the message based on the `delivery.timeout.ms` before the first network request even finishes timing out." },
+            { cat: "Timeouts & Thread Locks", q: "Why did Kafka 3.x change `retries` default to `Integer.MAX_VALUE`?", a: "Using a hardcoded retry count (e.g., 3) was dangerous during broker reboots (which might take 10 seconds). Now, the producer relies entirely on `delivery.timeout.ms`. It will retry infinitely as fast as it can until that time umbrella expires." },
+            { cat: "Timeouts & Thread Locks", q: "What is the role of `retry.backoff.ms`?", a: "When a network request fails, the producer waits this amount of time (default 100ms) before attempting the next retry. It prevents the producer from aggressively DDoS-ing a recovering broker." },
+            { cat: "Timeouts & Thread Locks", q: "If `max.block.ms` expires, does the message go into the buffer?", a: "No. The exception is thrown *before* the message is accepted by the producer. It never reaches the buffer, and it never enters the `delivery.timeout.ms` lifecycle." },
+            { cat: "Timeouts & Thread Locks", q: "How do you handle a `TimeoutException` from `delivery.timeout.ms` in Spring Boot?", a: "Because it occurs asynchronously in a background network thread, a standard `try-catch` around `send()` won't catch it. You must attach a callback to the `CompletableFuture` returned by `send()` and handle the failure in the `.exceptionally()` block." },
+            { cat: "Timeouts & Thread Locks", q: "Can a message expire via `delivery.timeout.ms` while sitting in the RAM buffer?", a: "Yes. If the network thread is hopelessly backlogged or the cluster is down, the message's stopwatch keeps ticking while it sits in `buffer.memory`. If it hits the limit, it is evicted from RAM without ever touching the network." },
+            { cat: "Timeouts & Thread Locks", q: "What is `socket.connection.setup.timeout.ms`?", a: "It controls the maximum time the producer will wait to establish the initial TCP handshake with the broker. If the network firewall is dropping packets (blackhole), this ensures the producer doesn't hang indefinitely." },
+
+            // CATEGORY: IDEMPOTENCE & EOS
+            { cat: "Idempotence & EOS", q: "What two properties must be enabled for Idempotence to function?", a: "You must configure `enable.idempotence=true` AND `acks=all`. Setting `acks=1` disables idempotence because the broker cannot guarantee the sequence tracking will survive a leader election." },
+            { cat: "Idempotence & EOS", q: "How does the broker identify a duplicate payload?", a: "The broker assigns a unique Producer ID (PID) to the client. The producer attaches an incrementing Sequence Number to every batch. If the broker receives Sequence 5 when it already successfully wrote Sequence 5, it silently ignores the payload and returns a success ACK." },
+            { cat: "Idempotence & EOS", q: "What happens if a broker receives Sequence 7 when it expects Sequence 5?", a: "The broker throws an `OutOfOrderSequenceException`. The producer realizes its internal state is corrupted or packets were lost, tears down the network connection, and attempts to re-sync its state with the broker." },
+            { cat: "Idempotence & EOS", q: "What is the relationship between `max.in.flight.requests.per.connection` and Idempotence?", a: "Historically, allowing >1 inflight request risked out-of-order data during retries. With idempotence, the broker uses sequence numbers to reconstruct the correct order in memory, allowing you to safely set `max.in.flight.requests=5` for high throughput without losing ordering." },
+            { cat: "Idempotence & EOS", q: "Why is `enable.idempotence` limited to a single partition?", a: "Because PIDs and Sequences are tracked at the partition level on the broker. If your application crashes halfway through sending messages to Partition A and Partition B, idempotence cannot roll back Partition A. For that, you need Transactions." },
+            { cat: "Idempotence & EOS", q: "How do you upgrade an idempotent producer to a Transactional producer?", a: "You must provide a static, unique string to `transactional.id` (or `transaction-id-prefix` in Spring Boot). This allows the broker's Transaction Coordinator to recognize the producer across application restarts." },
+            { cat: "Idempotence & EOS", q: "What is 'Zombie Fencing' in Kafka Transactions?", a: "If your app crashes but stays connected (a zombie), and Kubernetes spins up a new instance, both might try to write using the same `transactional.id`. The broker assigns a new 'Epoch' number to the new instance and immediately rejects all writes from the old zombie instance." },
+            { cat: "Idempotence & EOS", q: "Where does an aborted transaction physically go on the broker?", a: "It stays on the physical `.log` file on the hard drive. The Transaction Coordinator simply writes a hidden `ABORT` control marker at the end. It relies on consumers setting `isolation-level=read_committed` to silently skip reading those dirty records." },
+            { cat: "Idempotence & EOS", q: "What is `transaction.timeout.ms`?", a: "It is the maximum time the Transaction Coordinator will wait for a producer to send a `commit()` or `abort()` signal. If the producer crashes and this timer expires (default 1 minute), the broker automatically aborts the transaction." },
+            { cat: "Idempotence & EOS", q: "Does Idempotence add noticeable latency to the producer?", a: "No. PIDs and sequence numbers are lightweight integer headers added to the batch. The deduplication logic happens entirely in memory on the broker. The performance impact is effectively zero compared to standard `acks=all`." },
+
+            // CATEGORY: NETWORK & ADVANCED TUNING
+            { cat: "Network & Advanced Tuning", q: "What does `metadata.max.age.ms` achieve in a dynamic cluster?", a: "By default, the producer forces a metadata refresh every 5 minutes (300,000ms), even if no errors occur. This ensures the producer discovers newly added brokers or newly created partitions without waiting for a routing failure." },
+            { cat: "Network & Advanced Tuning", q: "Why would you tune `connections.max.idle.ms`?", a: "If your producer rarely sends messages (e.g., a nightly batch job), the firewall or load balancer might silently drop the idle TCP connection. Lowering this property ensures the producer cleanly closes connections before the network aggressively kills them." },
+            { cat: "Network & Advanced Tuning", q: "What happens if a custom `Partitioner` class throws an exception?", a: "The exception propagates directly up the call stack to the thread executing `kafkaTemplate.send()`. The message will not be batched, it will not enter the delivery timer, and it will be completely lost if not caught locally." },
+            { cat: "Network & Advanced Tuning", q: "What is the architectural use case for `interceptor.classes`?", a: "Interceptors can mutate or inspect records *before* serialization and *after* ACKs are received. They are commonly used by enterprise platform teams to inject tracing headers (OpenTelemetry), calculate end-to-end latency, or enforce schema compliance globally." },
+            { cat: "Network & Advanced Tuning", q: "How does `socket.send.buffer.bytes` differ from `buffer.memory`?", a: "`buffer.memory` is JVM RAM managed by the Kafka Client. `socket.send.buffer.bytes` configures the underlying Operating System's TCP socket buffer (SO_SNDBUF). If you are sending across high-latency WANs, you must increase this OS-level buffer." },
+            { cat: "Network & Advanced Tuning", q: "What is the purpose of `reconnect.backoff.max.ms`?", a: "If a broker completely dies, the producer tries to reconnect. To prevent a thundering herd problem when the broker restarts, the producer exponentially backs off its connection attempts, up to this maximum limit (default 1 second), introducing jitter." },
+            { cat: "Network & Advanced Tuning", q: "Can a producer be configured to write to the closest broker instead of the leader?", a: "No. By architectural design, Kafka Producers *must* append data to the Partition Leader. Only Kafka Consumers (in KIP-392) can be configured to fetch data from the closest follower replica to save cross-AZ cloud costs." },
+            { cat: "Network & Advanced Tuning", q: "What is the impact of using `DefaultPartitioner` with keys vs without keys in Kafka 3.x?", a: "With a key, it uses a deterministic Murmur2 hash to guarantee the key always hits the same partition (ensuring order). Without a key, it uses Sticky Partitioning: it completely fills a batch for one random partition, sends it, and then sticks to a different random partition." },
+            { cat: "Network & Advanced Tuning", q: "How do you expose internal producer metrics (like buffer exhaustion rates) to Prometheus?", a: "Implement the `metric.reporters` configuration property. By injecting a class like `JmxReporter` or a custom Datadog reporter, the producer will push internal JMX metrics (request rates, latency, buffer size) to your observability stack." },
+            { cat: "Network & Advanced Tuning", q: "What is the most severe consequence of misconfiguring `max.in.flight.requests.per.connection > 1` while explicitly setting `enable.idempotence=false`?", a: "If a network error causes a batch to fail, the producer will retry it. However, if a *later* batch successfully arrived in the meantime, the retried batch is appended afterward. This completely destroys message ordering, causing profound data corruption in event-sourced systems." },
+            { cat: "Network & Advanced Tuning", q: "In a Spring Boot environment, how do you verify producer constraints without a network proxy like Toxiproxy?", a: "You can physically simulate network constraints by artificially lowering the producer's `max.request.size` to 1KB and sending a 5KB string, or lowering `max.block.ms` to 2 seconds and stopping the local Docker broker to watch the thread fail fast." }
+        ];
+
+        // Group by Categories
+        const categories = [...new Set(database.map(item => item.cat))];
+        let currentCat = categories[0];
+
+        // DOM Elements
+        const navContainer = document.getElementById('nav-buttons');
+        const qContainer = document.getElementById('questions-container');
+        const catTitle = document.getElementById('current-category');
+        const qCounter = document.getElementById('q-counter');
+
+        // Initialization
+        function init() {
+            renderNav();
+            renderQuestions(currentCat);
+        }
+
+        // Render Navigation Sidebar
+        function renderNav() {
+            navContainer.innerHTML = '';
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = `nav-btn ${cat === currentCat ? 'active' : ''}`;
+                btn.innerText = `> ${cat}`;
+                btn.onclick = () => {
+                    currentCat = cat;
+                    renderNav();
+                    renderQuestions(currentCat);
+                };
+                navContainer.appendChild(btn);
+            });
+        }
+
+        // Render Questions for a Category
+        function renderQuestions(catFilter) {
+            qContainer.innerHTML = '';
+            const filteredQs = database.filter(q => q.cat === catFilter);
+            
+            catTitle.innerText = `// DIRECTORY: ${catFilter.toUpperCase()}`;
+            qCounter.innerText = `${filteredQs.length} RECORDS ACCESSED`;
+
+            filteredQs.forEach((data, index) => {
+                // Find actual overall index for numbering
+                const globalIndex = database.indexOf(data) + 1;
+
+                const card = document.createElement('div');
+                card.className = 'q-card';
+                card.innerHTML = `
+                    <div class="q-title"><span>[Q${globalIndex}]</span> ${data.q}</div>
+                    <button class="decrypt-btn" onclick="toggleDecrypt(this)">Decrypt Core</button>
+                    <div class="answer-container">
+                        <div class="answer-text">${data.a}</div>
+                    </div>
+                `;
+                qContainer.appendChild(card);
+            });
+            
+            // Smooth scroll to top of list
+            document.getElementById('content').scrollTo(0,0);
+        }
+
+        // Interaction Logic
+        window.toggleDecrypt = function(button) {
+            const card = button.closest('.q-card');
+            const isDecrypted = card.classList.contains('decrypted');
+            
+            if (isDecrypted) {
+                card.classList.remove('decrypted');
+                button.innerText = 'Decrypt Core';
+            } else {
+                card.classList.add('decrypted');
+                button.innerText = 'Encrypt Data';
+            }
+        };
+
+        // Boot
+        init();
+    </script>
+</body>
+</html>

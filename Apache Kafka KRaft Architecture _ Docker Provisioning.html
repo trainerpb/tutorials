@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Deep Dive: KRaft, Listeners & Cluster Topologies</title>
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-panel: #111827;
+            --bg-code: #1e293b;
+            --neon-blue: #00f0ff;
+            --neon-green: #39ff14;
+            --neon-purple: #a855f7;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(0, 240, 255, 0.25);
+            --border-color: #334155;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border-bottom: 2px solid var(--neon-blue);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+        }
+
+        header h1 {
+            color: var(--neon-blue);
+            margin: 0;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Navigation Tabs */
+        .tab-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: var(--bg-panel);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--neon-blue);
+            border-color: var(--neon-blue);
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--neon-blue);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Content Panels */
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--neon-blue);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        h3 {
+            color: var(--neon-green);
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-panel);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #1e293b;
+            color: var(--neon-blue);
+            font-weight: 600;
+        }
+
+        code {
+            font-family: "Courier New", Courier, monospace;
+            background-color: rgba(0, 240, 255, 0.1);
+            color: var(--neon-blue);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: var(--bg-code);
+            color: #e2e8f0;
+            padding: 1.25rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            font-weight: bold;
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--neon-purple);
+            border: 1px solid var(--neon-purple);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>[SYS_ARCH] Apache Kafka Vault</h1>
+        <p>KRaft Architecture, Networking Mechanics & Production Topologies</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('kraft')">01. KRaft Architecture</button>
+            <button class="tab-btn" onclick="switchTab('listeners')">02. Listeners & Advertised</button>
+            <button class="tab-btn" onclick="switchTab('single')">03. Single-Node Compose</button>
+            <button class="tab-btn" onclick="switchTab('multi')">04. Multi-Node Cluster</button>
+            <button class="tab-btn" onclick="switchTab('roles')">05. Broker vs. Controller</button>
+        </div>
+
+        <!-- PANEL 1: KRaft -->
+        <div id="kraft" class="panel active">
+            <h2>What is KRaft and Why Does It Matter?</h2>
+            <div class="card">
+                <span class="tag">Core Paradigm Shift</span>
+                <p><strong>KRaft</strong> (Kafka Raft Metadata Mode) is the modern consensus protocol built directly into Apache Kafka to manage metadata without depending on external tools.</p>
+                
+                <h3>Why KRaft? (The "Why")</h3>
+                <ul>
+                    <li><strong>ZooKeeper Elimination:</strong> Historically, Kafka relied on Apache ZooKeeper to store cluster metadata and elect controllers. This introduced a separate distributed system to manage, scale, and secure. KRaft embeds metadata management natively inside Kafka.</li>
+                    <li><strong>Massive Scalability:</strong> Metadata synchronization in ZooKeeper choked when clusters scaled to millions of partitions. KRaft handles metadata via an event-driven Raft quorum log, allowing clusters to scale effortlessly to millions of partitions with near-instantaneous failover times.</li>
+                    <li><strong>Simpler Operations:</strong> You no longer need to run two separate clusters (ZooKeeper + Kafka). A single Kafka binary handles both storage and consensus.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PANEL 2: Listeners & Advertised Listeners -->
+        <div id="listeners" class="panel">
+            <h2>Listeners, Advertised Listeners & Protocol Maps</h2>
+            <div class="card">
+                <p>Networking in Kafka is notoriously tricky because clients establish an initial connection to one port, but receive a metadata redirect telling them where to connect for specific partitions. Understanding the mapping is essential when bridging Docker and host machines.</p>
+
+                <h3>1. <code>KAFKA_LISTENERS</code> (The Binding Address)</h3>
+                <p>Defines the actual network interfaces and ports the Kafka broker binds to inside the container to listen for incoming TCP connections. Setting it to <code>PLAINTEXT://0.0.0.0:9092</code> means the broker accepts traffic on port 9092 from any network interface inside the container container network.</p>
+
+                <h3>2. <code>KAFKA_ADVERTISED_LISTENERS</code> (The Redirect Address)</h3>
+                <p>This is the address the broker <em>broadcasts back to clients</em> when they request cluster metadata. If a Spring Boot application runs on your local host machine outside Docker, the advertised listener must be <code>PLAINTEXT://localhost:9092</code>. If it incorrectly advertised <code>kafka:9092</code>, your host machine would throw an <code>UnknownHostException</code>.</p>
+
+                <h3>3. <code>KAFKA_LISTENER_SECURITY_PROTOCOL_MAP</code></h3>
+                <p>Maps logical listener names to security protocols. For example, <code>PLAINTEXT:PLAINTEXT</code> tells Kafka that the listener named <code>PLAINTEXT</code> uses unencrypted plaintext communication. In production, you would map secure channels like <code>SSL:SSL</code> or <code>SASL_PLAINTEXT:SASL_PLAINTEXT</code>.</p>
+
+                <h3>4. <code>KAFKA_CONTROLLER_LISTENER_NAMES</code></h3>
+                <p>Designates which internal listener name is reserved specifically for KRaft quorum communication between controller nodes (e.g., <code>CONTROLLER</code>).</p>
+            </div>
+        </div>
+
+        <!-- PANEL 3: Single-Node Compose -->
+        <div id="single" class="panel">
+            <h2>Single-Node KRaft Docker Compose</h2>
+            <div class="card">
+                <p>A modern, production-ready local setup using KRaft mode (ZooKeeper-less), recommended as the default for Apache Kafka. Includes Kafka UI for cluster visualization.</p>
+                <pre><code>version: '3.8'
+services:
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode settings
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      # Listeners configuration
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      # Topic default configurations
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      KAFKA_CLUSTERS_0_NAME: 'local-cluster'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:9092'
+
+volumes:
+  kafka_data:</code></pre>
+            </div>
+        </div>
+
+        <!-- PANEL 4: Multi-Node Cluster -->
+        <div id="multi" class="panel">
+            <h2>Multi-Node (3-Broker) KRaft Cluster</h2>
+            <div class="card">
+                <p>To form a multi-broker cluster, nodes share a unique <code>CLUSTER_ID</code> and cross-reference each other in <code>KAFKA_CONTROLLER_QUORUM_VOTERS</code>.</p>
+                <pre><code>version: '3.8'
+services:
+  kafka-1:
+    image: apache/kafka:latest
+    container_name: kafka-1
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: '4L62xdwCQKWvZs96A39vGA'
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka1_data:/var/lib/kafka/data
+
+  kafka-2:
+    image: apache/kafka:latest
+    container_name: kafka-2
+    ports:
+      - "9094:9094"
+    environment:
+      CLUSTER_ID: '4L62xdwCQKWvZs96A39vGA'
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9094'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
+    volumes:
+      - kafka2_data:/var/lib/kafka/data
+
+  kafka-3:
+    image: apache/kafka:latest
+    container_name: kafka-3
+    ports:
+      - "9096:9096"
+    environment:
+      CLUSTER_ID: '4L62xdwCQKWvZs96A39vGA'
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9096,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9096'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
+    volumes:
+      - kafka3_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      KAFKA_CLUSTERS_0_NAME: 'kraft-cluster'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka-1:9092,kafka-2:9094,kafka-3:9096'
+
+volumes:
+  kafka1_data:
+  kafka2_data:
+  kafka3_data:</code></pre>
+            </div>
+        </div>
+
+        <!-- PANEL 5: Broker vs Controller -->
+        <div id="roles" class="panel">
+            <h2>Broker (The Worker) vs. Controller (The Boss)</h2>
+            <div class="card">
+                <p>In KRaft mode, nodes can be co-located or isolated. Their functional boundaries are distinct:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Broker (The Worker)</th>
+                            <th>Controller (The Boss)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Primary Role</strong></td>
+                            <td>Handles message reads, writes, and local log storage.</td>
+                            <td>Manages cluster metadata, state, and coordination.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Client Interaction</strong></td>
+                            <td>Talks directly to Producers and Consumers.</td>
+                            <td>Talks only to Brokers (Clients do not connect here).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Scaling</strong></td>
+                            <td>Scales horizontally (tens or hundreds of nodes).</td>
+                            <td>Operates as a strict quorum (typically 3 or 5 nodes).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Topology Mode</strong></td>
+                            <td>Co-located (<code>broker,controller</code>) for local dev; isolated in production to protect metadata performance.</td>
+                            <td>Co-located (<code>broker,controller</code>) for local dev; isolated in production.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            // Hide all panels
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            // Remove active state from buttons
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            // Show target panel and activate button
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>

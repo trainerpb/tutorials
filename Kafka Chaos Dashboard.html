@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Chaos Engineering Dashboard</title>
+    <style>
+        /* --- CSS Variables for Theming --- */
+        :root[data-theme="dark"] {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --border-color: #334155;
+            --code-bg: #090d16;
+            --code-text: #a5b4fc;
+            --table-header: #312e81;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --text-color: #0f172a;
+            --panel-bg: #ffffff;
+            --accent-color: #0284c7;
+            --border-color: #cbd5e1;
+            --code-bg: #f8fafc;
+            --code-text: #1e40af;
+            --table-header: #e0e7ff;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+
+        /* --- Navigation & Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--accent-color); }
+
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { color: var(--accent-color); }
+        .tab-btn.active { border-bottom-color: var(--accent-color); color: var(--accent-color); }
+
+        .theme-toggle {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- Main Content --- */
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 { color: var(--accent-color); margin-top: 0; }
+        
+        /* --- Code Blocks --- */
+        .code-wrapper { position: relative; margin: 1rem 0; }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .copy-btn:hover { background: var(--accent-color); color: #fff; }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+        }
+
+        /* --- Accordion & Tables --- */
+        .accordion {
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 1rem;
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            outline: none;
+            transition: 0.3s;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .accordion:hover { background-color: var(--border-color); }
+        .accordion.active { border-bottom: none; color: var(--accent-color); }
+        .accordion::after { content: '\002B'; font-size: 1.5rem; }
+        .accordion.active::after { content: "\2212"; }
+
+        .panel {
+            padding: 0 1rem;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            margin-bottom: 1rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95em; }
+        th, td { padding: 12px; text-align: left; border: 1px solid var(--border-color); }
+        th { background-color: var(--table-header); color: var(--accent-color); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Kafka Chaos Dashboard</h1>
+        <div class="nav-controls">
+            <button class="tab-btn active" onclick="openTab(event, 'setup')">1. Setup Environment</button>
+            <button class="tab-btn" onclick="openTab(event, 'code')">2. Spring Boot Code</button>
+            <button class="tab-btn" onclick="openTab(event, 'tuning')">3. Scenarios & Tuning</button>
+            <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- ============================================== -->
+        <!-- TAB 1: SETUP ENVIRONMENT                       -->
+        <!-- ============================================== -->
+        <div id="setup" class="tab-content active">
+            <div class="card">
+                <h2>Local Dev Topology (KRaft + Toxiproxy)</h2>
+                <p>To establish a resilient testing architecture as described in the "Kafka Deep Dive" file, we use two separate configuration files to isolate the KRaft cluster from the proxy layer.</p>
+                
+                <h3>1. The Kafka Core</h3>
+                <p>The <code>docker-compose -kafka.yml</code> file explicitly provisions a fixed cluster ID to avoid boot synchronization failures[cite: 1]. It configures distinct internal and external routing ports: <code>INTERNAL://0.0.0.0:29092</code> for intra-docker UI communication and <code>EXTERNAL://0.0.0.0:9092</code> for external proxies or clients[cite: 1]. The Kafka UI is exposed on port <code>9080</code>[cite: 1].</p>
+                
+                <h3>2. The Chaos Proxy</h3>
+                <p>The <code>docker-compose.yml</code> file provisions the Toxiproxy daemon (exposing the management API on <code>8474</code> and a proxy port on <code>19092</code>) alongside the <code>buckle/toxiproxy-frontend</code> UI dashboard on port <code>8080</code>[cite: 2]. The UI container is directed to talk to the backend over the docker network using <code>TOXIPROXY_URL=http://toxiproxy:8474</code>[cite: 2].</p>
+                
+                <p><strong>Routing Instruction:</strong> Configure Toxiproxy to listen on port <code>19092</code> and forward upstream to <code>host.docker.internal:9092</code>. Then, configure your Spring Boot application to bootstrap to <code>localhost:19092</code>.</p>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: PRODUCER & CONSUMER CODE                -->
+        <!-- ============================================== -->
+        <div id="code" class="tab-content">
+            <div class="card">
+                <h2>Native ProducerRecord Sender</h2>
+                <p>Bypassing standard templates to inject custom native headers using <code>ProducerRecord</code>.</p>
+                <div class="code-wrapper">
+                    <button class="copy-btn" onclick="copyCode('producer-code')">Copy</button>
+<pre id="producer-code"><code>import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+import java.nio.charset.StandardCharsets;
+
+@Service
+public class NativeHeaderProducer {
+
+    private final KafkaTemplate&lt;String, Object&gt; kafkaTemplate;
+
+    public NativeHeaderProducer(KafkaTemplate&lt;String, Object&gt; kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void sendWithNativeRecord(String topic, String key, Object payload) {
+        // Construct the native Kafka record
+        ProducerRecord&lt;String, Object&gt; record = new ProducerRecord&lt;&gt;(topic, key, payload);
+        
+        // Append raw byte[] headers for tracing and chaos metadata
+        record.headers().add("X-Trace-ID", "trace-5541".getBytes(StandardCharsets.UTF_8));
+        record.headers().add("X-Tenant", "tenant-alpha".getBytes(StandardCharsets.UTF_8));
+
+        // Fire and rely on application.yml for delivery.timeout.ms resolution
+        kafkaTemplate.send(record).whenComplete((result, ex) -&gt; {
+            if (ex != null) {
+                System.err.println("Delivery completely failed: " + ex.getMessage());
+            }
+        });
+    }
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Native ConsumerRecord Listener</h2>
+                <p>Receiving the full record allows extraction of metadata, partition info, and native headers alongside the deserialized payload.</p>
+                <div class="code-wrapper">
+                    <button class="copy-btn" onclick="copyCode('consumer-code')">Copy</button>
+<pre id="consumer-code"><code>import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Service;
+import java.nio.charset.StandardCharsets;
+
+@Service
+public class NativeHeaderConsumer {
+
+    @KafkaListener(topics = "lab-topic", groupId = "chaos-group")
+    public void consume(ConsumerRecord&lt;String, Object&gt; record) {
+        System.out.printf("Received on Partition: %d | Offset: %d | Key: %s%n", 
+                          record.partition(), record.offset(), record.key());
+        
+        // Extract native headers safely
+        Header traceHeader = record.headers().lastHeader("X-Trace-ID");
+        if (traceHeader != null) {
+            String traceId = new String(traceHeader.value(), StandardCharsets.UTF_8);
+            System.out.println("Processing Trace Context: " + traceId);
+        }
+
+        // Process automatically deserialized payload
+        Object businessData = record.value();
+        System.out.println("Payload: " + businessData.toString());
+    }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: SCENARIOS & TUNING MATRIX               -->
+        <!-- ============================================== -->
+        <div id="tuning" class="tab-content">
+            <div class="card">
+                <h2>Configuration & Chaos Scenarios</h2>
+                <p>Expand each scenario to view the architectural matrix detailing configurations, validation methods, and expected behaviors.</p>
+
+                <button class="accordion">1. Partitioning Strategy (Null vs Same Key)</button>
+                <div class="panel">
+                    <table>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Level</th>
+                            <th>What to Tweak</th>
+                            <th>How to Check</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                        <tr>
+                            <td><code>key</code> (Null)</td>
+                            <td>Producer (Code)</td>
+                            <td>Set <code>key = null</code> in <code>ProducerRecord</code>.</td>
+                            <td>Print <code>record.partition()</code> on consumer. Send 10 messages.</td>
+                            <td>Sticky Partitioning: Messages are batched to one random partition, then the next batch goes to a different random partition. Ordering is NOT guaranteed.</td>
+                        </tr>
+                        <tr>
+                            <td><code>key</code> (Populated)</td>
+                            <td>Producer (Code)</td>
+                            <td>Set <code>key = "customer-123"</code></td>
+                            <td>Print <code>record.partition()</code> on consumer. Send 10 messages.</td>
+                            <td>Murmur2 Hash: All 10 messages will arrive on the exact same partition in the exact order they were sent.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <button class="accordion">2. Thread Protection & Starvation</button>
+                <div class="panel">
+                    <table>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Level</th>
+                            <th>What to Tweak</th>
+                            <th>How to Check</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                        <tr>
+                            <td><code>max.block.ms</code></td>
+                            <td>Producer (Config)</td>
+                            <td>Lower from <code>60000</code> to <code>2000</code>.</td>
+                            <td>Stop the <code>kafka</code> container. Trigger an HTTP request calling <code>send()</code>.</td>
+                            <td>Instead of hanging for 1 minute (exhausting Tomcat threads), the API fails fast in 2 seconds with a <code>TimeoutException</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>buffer.memory</code></td>
+                            <td>Producer (Config)</td>
+                            <td>Lower to <code>1024</code> (1KB).</td>
+                            <td>Loop a 2KB message send in a `for` loop.</td>
+                            <td>Producer instantly throws <code>BufferExhaustedException</code>, triggering <code>max.block.ms</code> before ever hitting the network.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <button class="accordion">3. Exactly-Once Semantics (Idempotence)</button>
+                <div class="panel">
+                    <table>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Level</th>
+                            <th>What to Tweak</th>
+                            <th>How to Check</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                        <tr>
+                            <td><code>enable.idempotence</code></td>
+                            <td>Producer (Config)</td>
+                            <td>Set <code>true</code> (must pair with <code>acks=all</code>).</td>
+                            <td>Use Toxiproxy UI (port 8080) to add a <code>timeout</code> toxic (Drop ACKs).</td>
+                            <td>Producer logs network retry attempts. Check Kafka UI (port 9080); exactly ONE message exists despite multiple network flights.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <button class="accordion">4. Throughput & Network Efficiency</button>
+                <div class="panel">
+                    <table>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Level</th>
+                            <th>What to Tweak</th>
+                            <th>How to Check</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                        <tr>
+                            <td><code>linger.ms</code> & <code>batch.size</code></td>
+                            <td>Producer (Config)</td>
+                            <td>Set <code>linger=50</code>, <code>batch=65536</code>, <code>compression=snappy</code>.</td>
+                            <td>Send high volume. Exec into broker and run <code>kafka-dump-log.sh</code>.</td>
+                            <td>Network thread pauses for 50ms, groups messages into large blocks, compresses them as one unit. High CPU efficiency, slightly higher latency.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <button class="accordion">5. The Network Lifecycle Timers</button>
+                <div class="panel">
+                    <table>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Level</th>
+                            <th>What to Tweak</th>
+                            <th>How to Check</th>
+                            <th>Expected Behavior</th>
+                        </tr>
+                        <tr>
+                            <td><code>request.timeout.ms</code> vs <code>delivery.timeout.ms</code></td>
+                            <td>Producer (Config)</td>
+                            <td>Set <code>request=3000</code>, <code>delivery=10000</code>. Add 100% bandwidth limit toxic.</td>
+                            <td>Watch application logs during the proxy drop.</td>
+                            <td>Single flight times out at 3s and retries. Flight 2 times out at 6s. Flight 3 times out at 9s. At 10s, overarching delivery umbrella expires and permanently drops the message.</td>
+                        </tr>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- --- JavaScript --- -->
+    <script>
+        // Theme Toggler
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+        }
+
+        // Tab Switching Logic
+        function openTab(evt, tabName) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Show target
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // Accordion Logic
+        const accordions = document.getElementsByClassName("accordion");
+        for (let i = 0; i < accordions.length; i++) {
+            accordions[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                const panel = this.nextElementSibling;
+                if (panel.style.maxHeight) {
+                    panel.style.maxHeight = null;
+                } else {
+                    panel.style.maxHeight = panel.scrollHeight + "px";
+                }
+            });
+        }
+
+        // Copy Code Logic
+        function copyCode(elementId) {
+            const codeBlock = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeBlock).then(() => {
+                const btn = document.activeElement;
+                const originalText = btn.innerText;
+                btn.innerText = "Copied!";
+                setTimeout(() => { btn.innerText = originalText; }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

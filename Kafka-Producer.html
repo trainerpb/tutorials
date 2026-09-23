@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Producer Mastery</title>
+    <style>
+        :root {
+            --bg-base: #111827;
+            --bg-panel: #1f2937;
+            --bg-elevated: #374151;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-primary: #f59e0b; /* Amber/Orange for Producer */
+            --accent-secondary: #3b82f6; /* Blue for Broker */
+            --accent-danger: #ef4444;
+            --accent-success: #10b981;
+            --border: #4b5563;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-code: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: var(--bg-panel);
+            box-shadow: 0 0 50px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        header {
+            padding: 40px;
+            background: linear-gradient(to right, #111827, #1f2937);
+            border-bottom: 2px solid var(--accent-primary);
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--accent-primary);
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        .tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            background: var(--bg-panel);
+        }
+
+        .content {
+            padding: 40px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+        .tab-pane.active { display: block; }
+
+        h2 { color: var(--accent-primary); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; }
+        h3 { color: var(--text-main); margin: 25px 0 10px 0; }
+        p { margin-bottom: 15px; color: #d1d5db; }
+        ul { margin-bottom: 20px; padding-left: 20px; color: #d1d5db; }
+        li { margin-bottom: 8px; }
+
+        .card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent-primary);
+        }
+
+        pre {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: var(--font-code);
+            font-size: 14px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .kw { color: #ff7b72; }
+        .str { color: #a5d6ff; }
+        .cmt { color: #8b949e; font-style: italic; }
+
+        /* Interactive Visualizer */
+        .lab-stage {
+            background: #0b0f19;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            position: relative;
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .node-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+
+        .node {
+            background: var(--bg-elevated);
+            border: 2px solid var(--border);
+            padding: 20px;
+            border-radius: 8px;
+            width: 250px;
+            text-align: center;
+            z-index: 2;
+        }
+        .node.producer { border-color: var(--accent-primary); }
+        .node.broker { border-color: var(--accent-secondary); }
+
+        .log-panel {
+            width: 100%; max-width: 800px; background: #000; color: #10b981; 
+            padding: 15px; border-radius: 6px; font-family: var(--font-code); font-size: 13px;
+            height: 150px; overflow-y: auto; border: 1px solid var(--border);
+        }
+
+        .btn-play {
+            background: var(--accent-primary);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: opacity 0.2s;
+        }
+        .btn-play:hover { opacity: 0.8; }
+        .btn-play:disabled { background: var(--border); cursor: not-allowed; }
+
+        .packet {
+            position: absolute;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 250px;
+            opacity: 0;
+            z-index: 1;
+        }
+        .packet.req { background: var(--accent-primary); }
+        .packet.ack { background: var(--accent-success); }
+        .packet.fail { background: var(--accent-danger); color: #fff; }
+
+        .broker-state {
+            margin-top: 15px;
+            font-family: var(--font-code);
+            font-size: 12px;
+            text-align: left;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Kafka Producer Mastery</h1>
+        <p>Acks, Partitioning, and Idempotency</p>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="openTab('tab-acks')">1. Acknowledgment (Acks)</button>
+        <button class="tab-btn" onclick="openTab('tab-partitions')">2. Partitioning</button>
+        <button class="tab-btn" onclick="openTab('tab-idempotence')">3. Idempotent Producer</button>
+        <button class="tab-btn" onclick="openTab('tab-emulate')">4. Emulate Lost ACK (Lab)</button>
+    </nav>
+
+    <main class="content">
+        
+        <!-- TAB 1: ACKS -->
+        <section id="tab-acks" class="tab-pane active">
+            <h2>Producer Acknowledgments (acks)</h2>
+            <p>The <code>acks</code> configuration dictates how many broker replicas must acknowledge a message before the producer considers the write successful. It is a direct trade-off between latency and durability.</p>
+            
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--accent-danger);">acks=0 (Fire and Forget)</h3>
+                <p>The producer sends the message and does not wait for a response from the broker. Retries cannot occur because the producer never knows if the write failed.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Maximum possible throughput, lowest latency.</li>
+                    <li><strong>Cons:</strong> Highest risk of data loss. If the broker is down or the network drops the packet, the message is gone permanently.</li>
+                    <li><strong>Use Case:</strong> High-volume telemetry or log aggregation where losing a few data points is acceptable.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--accent-primary);">acks=1 (Leader Acknowledgment)</h3>
+                <p>The producer waits for the <em>Leader</em> broker of the partition to write the record to its local disk and return an ACK. It does not wait for Follower replicas to copy it.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Good balance of latency and safety.</li>
+                    <li><strong>Cons:</strong> Edge case data loss. If the Leader broker crashes immediately after sending the ACK but before the Followers replicate the data, the new elected Leader will not have the message.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--accent-success);">acks=all or acks=-1 (Highest Durability)</h3>
+                <p>The producer waits for the Leader AND all in-sync replicas (ISRs) to successfully write the message. (Must be paired with broker config <code>min.insync.replicas=2</code>).</p>
+                <ul>
+                    <li><strong>Pros:</strong> Zero data loss as long as the minimum number of in-sync replicas remain alive.</li>
+                    <li><strong>Cons:</strong> Highest latency, as it must wait for network replication.</li>
+                    <li><strong>Use Case:</strong> Financial transactions, billing, core business events.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- TAB 2: PARTITIONS -->
+        <section id="tab-partitions" class="tab-pane">
+            <h2>Routing & Partitioning Strategies</h2>
+            <p>A Kafka topic is split into partitions. The Producer's Partitioner class decides which partition a message goes to. This is crucial for load balancing and strict ordering.</p>
+
+            <h3>1. The Default Partitioner (Key-Hash)</h3>
+            <p>If you provide a <strong>Key</strong> (e.g., <code>userId</code>, <code>orderId</code>), the default partitioner hashes the key using MurmurHash2 and mods it by the number of partitions.</p>
+            <p><strong>Effect:</strong> All messages with the identical key will ALWAYS be routed to the exact same partition. Since Kafka guarantees ordering within a single partition, all events for a specific user are processed sequentially.</p>
+
+            <h3>2. Sticky Partitioner (Null Key)</h3>
+            <p>If you do NOT provide a key, old Kafka versions used Round-Robin (P0, P1, P2, P0...). This was inefficient because it created many small network batches.</p>
+            <p>Modern Kafka (2.4+) uses the <strong>Sticky Partitioner</strong>. It "sticks" to a single partition until a batch is full or <code>linger.ms</code> expires, sends the large batch to that partition, and then randomly selects a new partition for the next batch. This drastically reduces CPU and network overhead.</p>
+
+            <h3>Spring Boot Implementation</h3>
+<pre><code><span class="kw">spring</span>:
+  <span class="kw">kafka</span>:
+    <span class="kw">producer</span>:
+      <span class="kw">acks</span>: all
+      <span class="kw">properties</span>:
+        <span class="kw">linger.ms</span>: <span class="str">5</span> <span class="cmt"># Wait 5ms to build larger batches</span>
+        <span class="kw">enable.idempotence</span>: <span class="str">true</span></code></pre>
+        </section>
+
+        <!-- TAB 3: IDEMPOTENCE -->
+        <section id="tab-idempotence" class="tab-pane">
+            <h2>The Duplicate Problem & Idempotent Producer</h2>
+            <p>Network unreliability creates a specific edge case for producers: <strong>The Lost ACK.</strong></p>
+
+            <div class="card">
+                <h3 style="margin-top:0;">The Scenario</h3>
+                <ol>
+                    <li>Producer sends Message A to the Broker.</li>
+                    <li>Broker successfully writes Message A to disk.</li>
+                    <li>Broker sends an ACK back to the Producer.</li>
+                    <li><strong>The network drops the ACK packet.</strong></li>
+                    <li>Producer times out, assumes the write failed, and retries sending Message A.</li>
+                    <li>Broker writes Message A again. You now have duplicate data!</li>
+                </ol>
+            </div>
+
+            <h3>The Solution: enable.idempotence=true</h3>
+            <p>When you enable idempotence (which is the default in Kafka 3.0+), the Producer does two things automatically under the hood:</p>
+            <ul>
+                <li><strong>Producer ID (PID):</strong> Upon startup, the producer asks the broker for a unique ID.</li>
+                <li><strong>Sequence Number:</strong> Every message the producer sends includes a sequence number (0, 1, 2, 3...).</li>
+            </ul>
+            <p>If an ACK is lost and the producer retries Sequence #0, the Broker checks its memory. It sees, "I already have Sequence #0 from this PID." The broker <strong>safely discards the duplicate write</strong> and re-sends the ACK. Exactly-once state is preserved.</p>
+        </section>
+
+        <!-- TAB 4: EMULATE LOST ACK -->
+        <section id="tab-emulate" class="tab-pane">
+            <h2>Real-World Emulation: Toxiproxy</h2>
+            <p>To tangibly see the effects of a lost ACK in a local environment, you need a network chaos tool. <strong>Toxiproxy</strong> (built by Shopify) sits between your Spring Boot app and the Kafka broker.</p>
+
+            <div class="card" style="border-left-color: var(--accent-secondary);">
+                <h3 style="margin-top:0;">1. Docker Compose Setup</h3>
+<pre><code><span class="kw">services</span>:
+  <span class="kw">kafka</span>:
+    <span class="kw">image</span>: bitnami/kafka:latest
+    <span class="kw">ports</span>: [<span class="str">"9092:9092"</span>]
+  <span class="kw">toxiproxy</span>:
+    <span class="kw">image</span>: shopify/toxiproxy
+    <span class="kw">ports</span>: [<span class="str">"8474:8474"</span>, <span class="str">"9093:9093"</span>] <span class="cmt"># 9093 is the proxy port</span></code></pre>
+                <p>Configure Spring Boot to connect to <code>localhost:9093</code> (the proxy), NOT 9092 (the broker directly).</p>
+            </div>
+
+            <div class="card" style="border-left-color: var(--accent-danger);">
+                <h3 style="margin-top:0;">2. Injecting Chaos (The Lost ACK)</h3>
+                <p>Use the Toxiproxy CLI or REST API to add a <code>timeout</code> toxic. This rule allows the producer's request packet to reach the broker, but blocks the broker's return ACK packet.</p>
+<pre><code><span class="cmt"># Drop data coming *from* Kafka (downstream) to simulate a lost ACK</span>
+toxiproxy-cli toxic add -t timeout -d downstream -a timeout=0 kafka_proxy</code></pre>
+                <p>If <code>enable.idempotence=false</code>, you will see duplicates in your consumer logs. If <code>true</code>, the broker will block the duplicate.</p>
+            </div>
+
+            <h2 style="margin-top:40px;">Interactive Lab: The Sequence Check</h2>
+            <div class="lab-stage">
+                <div style="width: 100%; display: flex; gap: 10px;">
+                    <button class="btn-play" id="btn-idem-off" onclick="runSimulation(false)">Simulate (Idempotence OFF)</button>
+                    <button class="btn-play" id="btn-idem-on" style="background: var(--accent-success);" onclick="runSimulation(true)">Simulate (Idempotence ON)</button>
+                </div>
+
+                <div class="node-row">
+                    <div class="node producer">
+                        <h4>Producer</h4>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">PID: <span id="sim-pid">N/A</span></div>
+                        <div style="font-size:12px; color:var(--text-muted);">Current Seq: <span id="sim-seq">0</span></div>
+                    </div>
+
+                    <div class="packet req" id="packet">MSG</div>
+
+                    <div class="node broker">
+                        <h4>Kafka Broker</h4>
+                        <div class="broker-state">
+                            <strong>Partition Log:</strong><br>
+                            <span id="broker-log">[]</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="log-panel" id="console-log">
+                    > Ready. Select a simulation mode.
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    // Tab Switching
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // Simulation Logic
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
+    async function runSimulation(isIdempotent) {
+        const btnOff = document.getElementById('btn-idem-off');
+        const btnOn = document.getElementById('btn-idem-on');
+        const logger = document.getElementById('console-log');
+        const packet = document.getElementById('packet');
+        const brokerLog = document.getElementById('broker-log');
+        
+        btnOff.disabled = true; btnOn.disabled = true;
+        logger.innerHTML = `> Starting simulation. Idempotence is ${isIdempotent ? 'ON' : 'OFF'}.`;
+        
+        const pid = isIdempotent ? "P-1001" : "None";
+        document.getElementById('sim-pid').innerText = pid;
+        document.getElementById('sim-seq').innerText = "0";
+        brokerLog.innerText = "[]";
+
+        const log = (msg) => { logger.innerHTML += `<br>> ${msg}`; logger.scrollTop = logger.scrollHeight; };
+
+        // 1. Initial Send
+        log(`Producer: Sending Payload X (Seq: 0)`);
+        packet.className = 'packet req';
+        packet.innerText = isIdempotent ? 'Payload X (PID:1001, Seq:0)' : 'Payload X';
+        packet.style.transition = 'left 1s linear';
+        packet.style.opacity = 1;
+        packet.style.left = '520px'; // Move to broker
+
+        await delay(1200);
+
+        // 2. Broker Writes
+        log(`Broker: Received payload.`);
+        brokerLog.innerText = isIdempotent ? "['Payload X (Seq:0)']" : "['Payload X']";
+        log(`Broker: Wrote payload to disk.`);
+        
+        // 3. Broker ACKs (But network drops it)
+        log(`Broker: Sending ACK back to Producer...`);
+        packet.className = 'packet ack';
+        packet.innerText = 'ACK';
+        packet.style.left = '400px'; 
+        
+        await delay(500);
+        
+        packet.className = 'packet fail';
+        packet.innerText = 'NETWORK DROP';
+        log(`[CHAOS]: Toxiproxy dropped the ACK packet!`);
+        
+        await delay(1000);
+        packet.style.opacity = 0;
+        packet.style.left = '250px'; // Reset pos
+        
+        // 4. Producer Retries
+        log(`Producer: Request timed out. Retrying...`);
+        await delay(1000);
+        
+        log(`Producer: Re-sending Payload X (Seq: 0)`);
+        packet.className = 'packet req';
+        packet.innerText = isIdempotent ? 'Payload X (PID:1001, Seq:0)' : 'Payload X';
+        packet.style.opacity = 1;
+        packet.style.left = '520px';
+        
+        await delay(1200);
+
+        // 5. Broker Evaluation
+        if(isIdempotent) {
+            log(`Broker: Evaluating... I already have PID:1001, Seq:0 in memory!`);
+            log(`Broker: DROPPING DUPLICATE WRITE.`);
+            // Log remains the same
+            
+            packet.className = 'packet ack';
+            packet.innerText = 'ACK';
+            packet.style.left = '250px';
+            log(`Broker: Re-sending ACK.`);
+            
+            await delay(1000);
+            log(`Producer: Received ACK. Exactly-once maintained.`);
+        } else {
+            log(`Broker: Received payload. Writing to disk...`);
+            brokerLog.innerText = "['Payload X', 'Payload X']"; // Duplicate
+            log(`[ERROR]: Duplicate data written to partition!`);
+            
+            packet.className = 'packet ack';
+            packet.innerText = 'ACK';
+            packet.style.left = '250px';
+            log(`Broker: Sending ACK.`);
+            
+            await delay(1000);
+            log(`Producer: Received ACK. Unaware of duplicate.`);
+        }
+
+        packet.style.opacity = 0;
+        btnOff.disabled = false; btnOn.disabled = false;
+    }
+</script>
+
+</body>
+</html>

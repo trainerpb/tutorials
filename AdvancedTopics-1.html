@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Kafka & Spring Boot Patterns</title>
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-panel: #161b22;
+            --accent: #58a6ff;
+            --accent-hover: #3182ce;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --code-bg: #010409;
+            --success: #2ea043;
+            --warning: #d29922;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--accent);
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover { background-color: rgba(88, 166, 255, 0.1); color: var(--text-main); }
+        
+        .nav-item.active {
+            border-left-color: var(--accent);
+            background-color: rgba(88, 166, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .page { display: none; max-width: 1000px; margin: 0 auto; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+
+        h1 { color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        h2 { color: var(--accent); margin-top: 40px; }
+        p { line-height: 1.6; font-size: 16px; }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .annotation { color: #d2a8ff; }
+        .comment { color: var(--text-muted); font-style: italic; }
+
+        /* Interactive Playground */
+        .playground {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        /* CQRS Visualizer specific styles */
+        .cqrs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .box {
+            background: #21262d;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .box h3 { margin-top: 0; font-size: 15px; color: var(--accent); }
+        
+        .db-table {
+            width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px;
+        }
+        .db-table th, .db-table td {
+            border: 1px solid var(--border); padding: 6px; text-align: left;
+        }
+
+        .btn {
+            background-color: var(--success);
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .btn:hover { background-color: #238636; }
+
+        .event-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        @keyframes moveRight {
+            0% { left: 100%; opacity: 1; }
+            100% { left: calc(100% + 20px); opacity: 0; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Kafka Masterclass</h2>
+        </div>
+        <div class="nav-item active" onclick="navigateTo('page1', this)">1. Schema Registry & Avro</div>
+        <div class="nav-item" onclick="navigateTo('page2', this)">2. Request-Reply Pattern</div>
+        <div class="nav-item" onclick="navigateTo('page3', this)">3. Kafka Streams & Windowing</div>
+        <div class="nav-item" onclick="navigateTo('page4', this)">4. CQRS & Event Sourcing</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- PAGE 1: Schema Registry -->
+        <div id="page1" class="page active">
+            <h1>Data Governance: Schema Registry & Avro</h1>
+            <p>In a microservices architecture, topics act as APIs. If a producer changes the JSON structure of an event, consumers will break. The <strong>Confluent Schema Registry</strong> combined with <strong>Apache Avro</strong> enforces strict contracts on your data streams.</p>
+            
+            <h2>1. The Avro Contract (.avsc)</h2>
+            <p>Instead of POJOs, you define schemas. The Avro Maven plugin automatically generates the Java classes during the build process.</p>
+<pre><code>{
+  <span class="string">"namespace"</span>: <span class="string">"com.example.events"</span>,
+  <span class="string">"type"</span>: <span class="string">"record"</span>,
+  <span class="string">"name"</span>: <span class="string">"UserCreated"</span>,
+  <span class="string">"fields"</span>: [
+    { <span class="string">"name"</span>: <span class="string">"userId"</span>, <span class="string">"type"</span>: <span class="string">"string"</span> },
+    { <span class="string">"name"</span>: <span class="string">"email"</span>, <span class="string">"type"</span>: <span class="string">"string"</span> },
+    { <span class="string">"name"</span>: <span class="string">"age"</span>, <span class="string">"type"</span>: [<span class="string">"int"</span>, <span class="string">"null"</span>], <span class="string">"default"</span>: null } <span class="comment">// Backward compatible change</span>
+  ]
+}</code></pre>
+
+            <h2>2. Spring Boot Producer Configuration</h2>
+            <p>The producer validates the object against the Schema Registry before publishing. If the schema is incompatible, it throws an exception locally, preventing corrupt data from entering the topic.</p>
+<pre><code><span class="keyword">spring</span>:
+  <span class="keyword">kafka</span>:
+    <span class="keyword">producer</span>:
+      <span class="keyword">key-serializer</span>: org.apache.kafka.common.serialization.StringSerializer
+      <span class="keyword">value-serializer</span>: io.confluent.kafka.serializers.KafkaAvroSerializer
+    <span class="keyword">properties</span>:
+      <span class="keyword">schema.registry.url</span>: http://localhost:8081
+      <span class="keyword">auto.register.schemas</span>: false <span class="comment"># Force CI/CD to register schemas, not apps</span>
+</code></pre>
+
+            <h2>3. Target Outcome</h2>
+            <p>You achieve <strong>Forward and Backward Compatibility</strong>. You can safely deploy new versions of producers or consumers independently without coordinating downtime, as the Schema Registry mathematically guarantees the new schema will not break downstream systems.</p>
+        </div>
+
+        <!-- PAGE 2: Request-Reply -->
+        <div id="page2" class="page">
+            <h1>Scatter-Gather & Request-Reply Pattern</h1>
+            <p>Kafka is inherently asynchronous. However, edge cases exist where a REST API needs a synchronous response, but the processing must happen via decoupled Kafka microservices. We achieve this using Spring's <code>ReplyingKafkaTemplate</code>.</p>
+
+            <h2>1. Architecture Concept</h2>
+            <ul>
+                <li>The API gateway publishes a message to <code>request-topic</code> and includes a dynamically generated <code>correlationId</code> and a <code>reply-topic</code> header.</li>
+                <li>The gateway thread blocks (with a timeout).</li>
+                <li>The worker service consumes the request, processes it, and publishes the result to the <code>reply-topic</code>, copying the <code>correlationId</code>.</li>
+                <li>The gateway matches the <code>correlationId</code> and resumes the HTTP thread.</li>
+            </ul>
+
+            <h2>2. The Synchronous Gateway (Producer)</h2>
+<pre><code><span class="annotation">@RestController</span>
+<span class="keyword">public class</span> OrderGateway {
+    <span class="keyword">private final</span> ReplyingKafkaTemplate&lt;String, OrderReq, OrderRes&gt; template;
+
+    <span class="annotation">@PostMapping</span>(<span class="string">"/orders"</span>)
+    <span class="keyword">public</span> ResponseEntity&lt;OrderRes&gt; createOrder(<span class="annotation">@RequestBody</span> OrderReq req) <span class="keyword">throws</span> Exception {
+        ProducerRecord&lt;String, OrderReq&gt; record = <span class="keyword">new</span> ProducerRecord&lt;&gt;(<span class="string">"orders-req"</span>, req);
+        
+        <span class="comment">// Sends and blocks waiting for the exact correlation ID on the reply topic</span>
+        RequestReplyFuture&lt;String, OrderReq, OrderRes&gt; future = template.sendAndReceive(record);
+        
+        ConsumerRecord&lt;String, OrderRes&gt; response = future.get(<span class="keyword">10</span>, TimeUnit.SECONDS);
+        <span class="keyword">return</span> ResponseEntity.ok(response.value());
+    }
+}</code></pre>
+
+            <h2>3. The Worker (Consumer)</h2>
+<pre><code><span class="annotation">@Service</span>
+<span class="keyword">public class</span> OrderWorker {
+
+    <span class="annotation">@KafkaListener</span>(topics = <span class="string">"orders-req"</span>)
+    <span class="annotation">@SendTo</span> <span class="comment">// Automatically routes the return value to the 'reply-topic' header</span>
+    <span class="keyword">public</span> OrderRes processOrder(OrderReq request) {
+        <span class="comment">// Complex business logic</span>
+        <span class="keyword">return new</span> OrderRes(request.getId(), <span class="string">"APPROVED"</span>);
+    }
+}</code></pre>
+        </div>
+
+        <!-- PAGE 3: Kafka Streams -->
+        <div id="page3" class="page">
+            <h1>Kafka Streams: Stateful Processing & Windowing</h1>
+            <p>Standard consumers process one event at a time (stateless). <strong>Kafka Streams</strong> allows you to process data over time, joining multiple topics, and aggregating data into state stores (RocksDB) local to your application.</p>
+
+            <h2>1. Use Case: Real-Time Fraud Detection</h2>
+            <p><strong>Requirement:</strong> Detect if a user attempts more than 5 transactions within a 1-minute window.</p>
+
+            <h2>2. Spring Boot Streams Implementation</h2>
+<pre><code><span class="annotation">@Configuration</span>
+<span class="annotation">@EnableKafkaStreams</span>
+<span class="keyword">public class</span> StreamConfig {
+
+    <span class="annotation">@Autowired</span>
+    <span class="keyword">public void</span> buildPipeline(StreamsBuilder builder) {
+        KStream&lt;String, Transaction&gt; transactions = builder.stream(<span class="string">"tx-topic"</span>);
+
+        transactions
+            .groupByKey() <span class="comment">// Group by userId</span>
+            .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(<span class="keyword">1</span>)))
+            .count() <span class="comment">// Stateful operation! Backed by local RocksDB</span>
+            .filter((windowedUserId, count) -> count > <span class="keyword">5</span>)
+            .toStream()
+            .map((windowedId, count) -> <span class="keyword">new</span> KeyValue&lt;&gt;(windowedId.key(), <span class="string">"FRAUD_ALERT"</span>))
+            .to(<span class="string">"fraud-alerts-topic"</span>);
+    }
+}</code></pre>
+
+            <h2>3. Target Outcome</h2>
+            <p>Your Spring Boot application is now a real-time stream processing engine. It requires no external database to track the counts; the state is maintained efficiently on the JVM disk and backed up automatically to Kafka changelog topics for fault tolerance.</p>
+        </div>
+
+        <!-- PAGE 4: CQRS & Event Sourcing -->
+        <div id="page4" class="page">
+            <h1>CQRS & Event Sourcing Architecture</h1>
+            <p>Command Query Responsibility Segregation (CQRS) separates the write model (Commands) from the read model (Queries). Event Sourcing means your source of truth is a log of events, not the current state.</p>
+            
+            <div class="playground">
+                <h3 style="margin-top: 0; color: #fff;">Interactive CQRS Flow</h3>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">Click "Submit Command" to append an event to the Event Store (Kafka). The Projection Engine consumes this event and updates the Materialized View (Read DB) optimized for queries.</p>
+                
+                <div class="cqrs-grid">
+                    <div class="box">
+                        <h3>1. Command API</h3>
+                        <p style="font-size: 13px;">POST /orders<br>{"item": "Laptop", "qty": 1}</p>
+                        <button class="btn" onclick="triggerCQRS()">Submit Command</button>
+                    </div>
+                    
+                    <div class="box" style="border-color: var(--warning);">
+                        <h3 style="color: var(--warning);">2. Kafka (Event Store)</h3>
+                        <p style="font-size: 13px;">Append-only log</p>
+                        <div id="eventLog" style="font-family: monospace; font-size: 11px; text-align: left; background: #000; padding: 10px; border-radius: 4px; min-height: 80px; overflow: hidden;">
+                            > _
+                        </div>
+                    </div>
+                    
+                    <div class="box" style="border-color: var(--success);">
+                        <h3 style="color: var(--success);">3. Query API (Read Model)</h3>
+                        <p style="font-size: 13px;">Fast Materialized View</p>
+                        <table class="db-table">
+                            <thead>
+                                <tr><th>ID</th><th>State</th></tr>
+                            </thead>
+                            <tbody id="readModelTbody">
+                                <!-- Data injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <h2>1. The Write Side (Command)</h2>
+            <p>The system never executes <code>UPDATE orders SET status = 'SHIPPED'</code>. It only ever <code>INSERTS</code> a new <code>OrderShippedEvent</code> to Kafka.</p>
+            
+            <h2>2. The Read Side (Projection)</h2>
+            <p>A separate consumer listens to all events and projects them into a highly optimized database structure (e.g., Elasticsearch for searching, or Redis for fast key-value lookups).</p>
+<pre><code><span class="annotation">@Service</span>
+<span class="keyword">public class</span> OrderProjectionEngine {
+    
+    <span class="annotation">@KafkaListener</span>(topics = <span class="string">"order-events"</span>)
+    <span class="keyword">public void</span> updateReadModel(Event event) {
+        <span class="keyword">if</span> (event <span class="keyword">instanceof</span> OrderCreatedEvent e) {
+            readDb.save(<span class="keyword">new</span> OrderSummary(e.getId(), <span class="string">"PENDING"</span>));
+        } <span class="keyword">else if</span> (event <span class="keyword">instanceof</span> OrderShippedEvent e) {
+            readDb.updateStatus(e.getId(), <span class="string">"SHIPPED"</span>);
+        }
+    }
+}</code></pre>
+        </div>
+
+    </div>
+
+    <script>
+        // Navigation Logic
+        function navigateTo(pageId, navElement) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            navElement.classList.add('active');
+        }
+
+        // CQRS Interactive Logic
+        let orderId = 1000;
+        
+        function triggerCQRS() {
+            orderId++;
+            const currentId = orderId;
+            const logBox = document.getElementById('eventLog');
+            
+            // Step 1: Append to Event Store
+            const eventStr = `> {type:"OrderCreated", id:${currentId}}\n`;
+            logBox.innerHTML = eventStr + logBox.innerHTML;
+            
+            // Step 2: Project to Read Model (Simulate network delay)
+            setTimeout(() => {
+                const tbody = document.getElementById('readModelTbody');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>#${currentId}</td><td><span style="color:var(--success)">PENDING</span></td>`;
+                tbody.prepend(tr);
+                
+                // Keep table small for visual purposes
+                if(tbody.children.length > 3) tbody.removeChild(tbody.lastChild);
+                
+            }, 800);
+        }
+    </script>
+</body>
+</html>
