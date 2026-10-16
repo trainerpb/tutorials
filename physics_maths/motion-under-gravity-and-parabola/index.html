@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soham Sir's Learning Hub | Physics × Maths × Code</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter & Space Grotesk -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            900: '#1e1b4b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar for horizontal tab bar & content */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+        }
+
+        /* Animated Trajectory SVG Path */
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        .trajectory-line {
+            stroke-dasharray: 400;
+            stroke-dashoffset: 400;
+            animation: dash 3s ease-out forwards infinite;
+        }
+
+        /* Subtle glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- ==================== TOP HEADER & NAVIGATION BAR ==================== -->
+    <header class="bg-slate-900/90 border-b border-slate-800/80 backdrop-blur-md z-30 shrink-0">
+        <!-- Upper Brand & Action Bar -->
+        <div class="max-w-[1920px] mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- Left: Brand Identity & Home Trigger -->
+            <div class="flex items-center gap-3">
+                <button onclick="selectTab(null)" 
+                        class="group flex items-center gap-3 text-left focus:outline-none"
+                        title="Return to Soham Sir's Philosophy (Deselect Tabs)">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-amber-500 p-0.5 shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                        <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                            <i class="fa-solid fa-baseball-bat-ball text-amber-400 text-lg group-hover:rotate-12 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-display font-bold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-indigo-200 to-amber-200 bg-clip-text text-transparent">
+                                Soham Sir's Use-Case Lab
+                            </h1>
+                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                Physics × Maths × Code
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 hidden md:block">
+                            From Conic Locus (<span class="font-mono text-amber-300">e = 1</span>) to Rohit Sharma's Sixer Trajectory
+                        </p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Right: Active File Controls & Local Folder Helper -->
+            <div class="flex items-center gap-2 sm:gap-2.5 ml-auto">
+                <!-- Philosophy / Home Button -->
+                <button id="philosophyBtn"
+                        onclick="selectTab(null)"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
+                    <i class="fa-solid fa-compass-drafting"></i>
+                    <span>Philosophy Home</span>
+                </button>
+
+                <!-- Contextual Controls (Visible when a tab is active) -->
+                <div id="activePageControls" class="hidden items-center gap-2 border-l border-slate-800 pl-2 sm:pl-3">
+                    <!-- Current Filename Badge -->
+                    <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 text-slate-400 text-xs font-mono max-w-[260px] truncate"
+                         id="currentFileBadge" title="">
+                        <i class="fa-regular fa-file-code text-indigo-400"></i>
+                        <span id="currentFileNameText" class="truncate">file.html</span>
+                    </div>
+
+                    <!-- Reload Iframe Button -->
+                    <button onclick="reloadCurrentFrame()"
+                            class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm transition-colors border border-slate-700/60"
+                            title="Reload Current Module">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+
+                    <!-- Open in New Tab Button -->
+                    <a id="openNewTabBtn"
+                       href="#"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-semibold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all transform hover:-translate-y-0.5">
+                        <span>Open in New Tab</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lower Horizontal Tab Bar (All 6 Directory Files) -->
+        <nav class="bg-slate-950/70 border-t border-slate-800/70 px-3 pt-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+             aria-label="Directory Modules">
+            <div id="tabBarContainer" class="flex items-center gap-1.5 min-w-max pb-1">
+                <!-- Populated dynamically by JavaScript -->
+            </div>
+        </nav>
+    </header>
+
+    <!-- ==================== MAIN CONTENT WORKSPACE ==================== -->
+    <main class="flex-1 relative overflow-hidden flex flex-col">
+
+        <!-- 1. DEFAULT LANDING VIEW (WHEN NO TAB IS SELECTED) -->
+        <section id="welcomePhilosophyView" class="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-8 select-text">
+            <div class="max-w-6xl mx-auto space-y-8 pb-12">
+
+                <!-- Hero Banner with Animated Sixer Trajectory -->
+                <div class="relative rounded-3xl overflow-hidden border border-indigo-500/30 bg-gradient-to-br from-slate-900 via-indigo-950/60 to-slate-900 p-6 sm:p-10 shadow-2xl">
+                    <!-- Decorative Background SVG Parabola Grid -->
+                    <svg class="absolute inset-0 w-full h-full opacity-20 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="arcGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#6366f1" />
+                                <stop offset="50%" stop-color="#f59e0b" />
+                                <stop offset="100%" stop-color="#10b981" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Directrix & Focus lines -->
+                        <line x1="60" y1="0" x2="60" y2="320" stroke="#94a3b8" stroke-dasharray="6 6" stroke-width="1.5"/>
+                        <circle cx="140" cy="180" r="5" fill="#f59e0b" />
+                        <!-- Parabolic Sixer Arc -->
+                        <path class="trajectory-line" d="M 80 290 Q 380 -120 760 280" fill="none" stroke="url(#arcGrad)" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+
+                    <div class="relative z-10 grid lg:grid-cols-12 gap-8 items-center">
+                        <div class="lg:col-span-8 space-y-5">
+                            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-semibold tracking-wide uppercase">
+                                <i class="fa-solid fa-sparkles"></i>
+                                <span>Soham Sir's Foundational Manifesto</span>
+                            </div>
+
+                            <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
+                                Build From the Foundation. <br/>
+                                <span class="bg-gradient-to-r from-amber-300 via-orange-400 to-indigo-400 bg-clip-text text-transparent">
+                                    Think, Correlate &amp; Apply Beyond the Classroom!
+                                </span>
+                            </h2>
+
+                            <p class="text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl">
+                                Welcome to the interactive workspace! Currently, <strong class="text-white">no module tab is selected</strong>—because before diving into equations or problem sets, it is vital to pause and internalize <em>why</em> and <em>how</em> we learn. Soham Sir strongly opposes mechanical rote learning and fragmented textbook silos. Instead, he champions building unshakeable first-principles intuition where you <strong class="text-indigo-300">observe a real phenomenon, correlate concepts across disciplines, code your own simulations, brainstorm wildly, and apply what you learn</strong> to the world around you.
+                            </p>
+
+                            <!-- Quick Jump Pills -->
+                            <div class="pt-2 flex flex-wrap items-center gap-3">
+                                <button onclick="selectTab(0)"
+                                        class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all transform hover:-translate-y-0.5">
+                                    <i class="fa-solid fa-play"></i>
+                                    <span>Start with Parabola Masterclass</span>
+                                </button>
+                                <button onclick="selectTab(3)"
+                                        class="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-medium text-sm flex items-center gap-2 transition-all">
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <span>Launch Hitman's Physics Comic Lab</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right Visual Callout Card: The Refugee Inspired Anthem -->
+                        <div class="lg:col-span-4">
+                            <div class="rounded-2xl bg-slate-950/90 border border-amber-500/40 p-6 shadow-xl relative overflow-hidden">
+                                <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-xl"></div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-music"></i> The Classroom Anthem
+                                    </span>
+                                    <span class="text-[11px] text-slate-400 italic">Inspired by "Refugee"</span>
+                                </div>
+
+                                <blockquote class="space-y-3 border-l-2 border-amber-400 pl-4 my-2">
+                                    <p class="text-xs text-slate-400 line-through decoration-rose-500/70">
+                                        "Sarhad insaan ke liye hai, socho tumne aur maine kya paaya insaan hoke..."
+                                    </p>
+                                    <p class="font-display text-lg sm:text-xl font-bold text-white leading-snug">
+                                        “Subjects aur Exam-o insaan ke liye hain, <span class="text-amber-400">insaan Subjects aur Exam-o ke liye nahi!</span>”
+                                    </p>
+                                    <p class="text-xs sm:text-sm text-indigo-200/90 italic leading-relaxed">
+                                        "Panchhi, nadiya, pawan ke jhonke—aur Rohit ke chhakke—koi sarhad (subject boundary) na inhe roke! Socho tumne aur maine kya paaya sirf ratta-maar student hoke..."
+                                    </p>
+                                </blockquote>
+
+                                <p class="mt-4 text-xs text-slate-400 leading-relaxed">
+                                    Artificial borders between <span class="text-slate-200 font-medium">Physics, Mathematics, and Computer Science</span> only exist on exam timetables. Nature knows no chapters!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4 Core Pillars of Soham Sir's Pedagogy ("Bloated" / Comprehensive Deep-Dive) -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-display text-xl sm:text-2xl font-bold text-white flex items-center gap-2.5">
+                            <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                            <span>Why We Learn By Use-Case: The 4 Pillars of Mastery</span>
+                        </h3>
+                        <span class="text-xs text-slate-400 hidden sm:inline">Everything connects when you look deep enough</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <!-- Pillar 1: Foundation & First Principles -->
+                        <div class="glass-panel rounded-2xl p-6 hover:border-indigo-500/40 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-400 text-xl">
+                                    <i class="fa-solid fa-cubes"></i>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="font-display font-bold text-lg text-white">
+                                        1. Build From the Foundation Up (Zero Rote Memorization)
+                                    </h4>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        Never treat a formula like a magic spell dropped from the sky. Ask: <em>Where did <span class="font-mono text-amber-300">y² = 4ax</span> come from?</em> It starts from a simple geometric promise—a point moving so its distance from a fixed point (<strong>Focus</strong>) equals its perpendicular distance from a fixed line (<strong>Directrix</strong>), giving eccentricity <span class="font-mono text-indigo-300">e = PS / PM = 1</span>. When your foundation is rock-solid, even the toughest twisted problem—like a chewing gum stuck to a rolling wheel or a projectile launched from a moving platform—becomes a natural extension of basics.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pillar 2: When Rohit Hits a Sixer (Physics + Maths Convergence) -->
+                        <div class="glass-panel rounded-2xl p-6 hover:border-amber-500/40 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 text-xl">
+                                    <i class="fa-solid fa-baseball"></i>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="font-display font-bold text-lg text-white">
+                                        2. Teach Every Subject by Use-Case: Rohit's Sixer!
+                                    </h4>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        Why teach Coordinate Geometry in a math period and Projectile Kinematics two months later in physics as if they are strangers? When <strong>Rohit Sharma ("The Hitman")</strong> leans into a pull shot and sends the cricket ball soaring into the stands, universe doesn't pause to switch textbooks!
+                                        <span class="block mt-1.5 text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+                                            <strong>The Grand Unification:</strong> Gravity pulls vertically (<span class="font-mono">y = u_y·t - ½gt²</span>) while horizontal velocity stays steady (<span class="font-mono">x = u_x·t</span>). Eliminate time <span class="font-mono">t</span>, and boom—Newton's Mechanics reveals Apollonius's Conic Parabola (<span class="font-mono">y = x·tanθ - gx² / 2u²cos²θ</span>)! The highest point of Rohit's sixer <em>is</em> the Vertex of the parabola; the latus rectum governs the flatness of the arc!
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pillar 3: Code What You Learn -->
+                        <div class="glass-panel rounded-2xl p-6 hover:border-emerald-500/40 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400 text-xl">
+                                    <i class="fa-solid fa-terminal"></i>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="font-display font-bold text-lg text-white">
+                                        3. Code What You Learn: Turn Equations into Living Worlds
+                                    </h4>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        If you can code it, you truly understand it. Static blackboard diagrams freeze motion, hiding the intuition. By translating equations into HTML5 Canvas simulations, Python scripts, or interactive sliders, you can tweak launch velocity <span class="font-mono text-emerald-300">u</span>, angle <span class="font-mono text-emerald-300">θ</span>, or gravity <span class="font-mono text-emerald-300">g</span> in real time and watch the directrix, focus, velocity vectors, and locus evolve before your eyes. Coding transforms passive students into active scientific creators.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pillar 4: Think, Correlate, Brainstorm & Apply -->
+                        <div class="glass-panel rounded-2xl p-6 hover:border-purple-500/40 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0 text-purple-400 text-xl">
+                                    <i class="fa-solid fa-brain"></i>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="font-display font-bold text-lg text-white">
+                                        4. Brainstorm, Correlate &amp; Apply Beyond the Classroom
+                                    </h4>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        What happens when a chewing gum sticks to the rim of a bicycle wheel? Or when a cricketer catches a ball near the boundary rope? Or how satellite dishes focus weak radio signals onto a single receiver using the reflection property of a parabola? Soham Sir challenges you to look at everyday puzzles ("ChewingGum Problems"), strip away the noise, correlate mechanics with geometry, and brainstorm multiple elegant solutions.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Directory Modules Grid (Quick Launchers) -->
+                <div class="space-y-4 pt-2">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-display text-xl sm:text-2xl font-bold text-white flex items-center gap-2.5">
+                                <i class="fa-solid fa-folder-open text-amber-400"></i>
+                                <span>Interactive Directory Modules (6 Files Ready)</span>
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-400">
+                                Click any module card or top navigation tab to load it inside the embedded viewer, or launch it directly in a new browser tab.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="moduleCardsGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Dynamically populated by JavaScript -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 2. IFRAME CONTENT VIEWER (SHOWN WHEN ANY FILE TAB IS SELECTED) -->
+        <section id="iframeWorkspaceView" class="hidden flex-1 flex-col bg-slate-950 relative">
+            
+            <!-- Subtle Status / Helper Bar above Iframe -->
+            <div class="bg-slate-900/95 border-b border-slate-800 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <div class="flex items-center gap-2 truncate">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="font-medium text-slate-200" id="statusModuleTitle">Module Title</span>
+                    <span class="text-slate-600">|</span>
+                    <code class="text-indigo-300 font-mono truncate" id="statusModuleFile">filename.html</code>
+                </div>
+                <div class="flex items-center gap-3 ml-auto">
+                    <button onclick="selectTab(null)" class="text-slate-400 hover:text-amber-300 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Close Tab &amp; Return to Philosophy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- The Embedded Iframe -->
+            <div class="flex-1 relative bg-white">
+                <iframe id="contentIframe"
+                        src="about:blank"
+                        class="w-full h-full border-0"
+                        title="Module Content Viewer"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals">
+                </iframe>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        /**
+         * Exact list of HTML files in the user's directory as shown in the screenshot.
+         */
+        const directoryFiles = [
+            {
+                id: 'masterclass',
+                filename: 'parabola_masterclass_from_conic_locus_e_1_to_rohit_sharma_s_sixer_trajectory.html',
+                shortTitle: '1. Parabola Masterclass (e=1 to Sixer)',
+                fullTitle: "Parabola Masterclass: From Conic Locus (e=1) to Rohit Sharma's Sixer Trajectory",
+                category: 'Core Masterclass',
+                badgeColor: 'from-amber-500 to-orange-500',
+                icon: 'fa-baseball-bat-ball',
+                description: 'Complete foundational journey starting from focus-directrix conic locus (e = 1) all the way to the physics & math of Rohit Sharma’s sixer trajectory.'
+            },
+            {
+                id: 'problems',
+                filename: 'Problems.html',
+                shortTitle: '2. Problems',
+                fullTitle: 'Interactive Curated Problems Set',
+                category: 'Practice & Application',
+                badgeColor: 'from-indigo-500 to-blue-500',
+                icon: 'fa-laptop-code',
+                description: 'Curated conceptual and numerical problems that test multi-concept correlation across coordinate geometry and mechanics.'
+            },
+            {
+                id: 'projectile-2',
+                filename: 'Parabola-Projectile-2.html',
+                shortTitle: '3. Parabola-Projectile-2',
+                fullTitle: 'Parabola & Projectile Motion — Part 2 Deep Dive',
+                category: 'Kinematics × Conics',
+                badgeColor: 'from-emerald-500 to-teal-500',
+                icon: 'fa-compass-drafting',
+                description: 'Advanced correlations between parabolic geometry parameters (vertex, latus rectum, tangent slopes) and projectile kinematics.'
+            },
+            {
+                id: 'comic-lab',
+                filename: 'hitman_s_physics_comic_lab_parabola_locus_e_1_projectile_motion.html',
+                shortTitle: "4. Hitman's Physics Comic Lab",
+                fullTitle: "Hitman's Physics Comic Lab: Parabola Locus (e=1) & Projectile Motion",
+                category: 'Visual Storytelling Lab',
+                badgeColor: 'from-purple-500 to-pink-500',
+                icon: 'fa-bolt-lightning',
+                description: 'Visual comic-style interactive laboratory featuring The Hitman where locus geometry, physics equations, and live simulations collide.'
+            },
+            {
+                id: 'chewing-gum-1',
+                filename: 'ChewingGum problem-1.html',
+                shortTitle: '5. ChewingGum Problem-1',
+                fullTitle: 'ChewingGum Problem 1 — Real-World Brainstorm Challenge',
+                category: 'Brainstorm Challenge',
+                badgeColor: 'from-rose-500 to-orange-500',
+                icon: 'fa-puzzle-piece',
+                description: 'Part 1 of the signature thought-provoking problem: analyze, correlate, and build the model from foundational principles.'
+            },
+            {
+                id: 'chewing-gum-2',
+                filename: 'ChewingGum problem-2.html',
+                shortTitle: '6. ChewingGum Problem-2',
+                fullTitle: 'ChewingGum Problem 2 — Extended Synthesis & Application',
+                category: 'Brainstorm Challenge',
+                badgeColor: 'from-cyan-500 to-blue-500',
+                icon: 'fa-brain',
+                description: 'Part 2 continuation pushing deeper into non-routine application, graphical insight, and interdisciplinary synthesis.'
+            }
+        ];
+
+        // State tracking: null means no tab is selected (Default Soham Sir Philosophy view)
+        let activeTabIndex = null;
+
+        /**
+         * Encode filename properly for href/src attributes (handles spaces like in "ChewingGum problem-1.html")
+         */
+        function getSafeFileUrl(filename) {
+            return encodeURI(filename);
+        }
+
+        /**
+         * Render the top navigation tab buttons and the landing page quick-launch cards
+         */
+        function renderNavigationAndCards() {
+            const tabBarContainer = document.getElementById('tabBarContainer');
+            const moduleCardsGrid = document.getElementById('moduleCardsGrid');
+
+            tabBarContainer.innerHTML = '';
+            moduleCardsGrid.innerHTML = '';
+
+            directoryFiles.forEach((mod, index) => {
+                const isSelected = activeTabIndex === index;
+                const safeUrl = getSafeFileUrl(mod.filename);
+
+                // 1. Create Top Bar Tab Button
+                const tabBtn = document.createElement('button');
+                tabBtn.type = 'button';
+                tabBtn.onclick = () => selectTab(index);
+                tabBtn.className = `group relative flex items-center gap-2 px-3.5 py-2 rounded-t-xl text-xs sm:text-sm font-medium transition-all border-b-2 whitespace-nowrap ${
+                    isSelected
+                        ? 'bg-slate-900 text-amber-300 border-amber-400 shadow-inner'
+                        : 'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-transparent'
+                }`;
+
+                tabBtn.innerHTML = `
+                    <i class="fa-solid ${mod.icon} ${isSelected ? 'text-amber-400' : 'text-slate-500 group-hover:text-indigo-400'} transition-colors"></i>
+                    <span>${mod.shortTitle}</span>
+                    <span onclick="event.stopPropagation(); window.open('${safeUrl}', '_blank');"
+                          title="Open ${mod.filename} in a new browser tab"
+                          class="ml-1 px-1.5 py-0.5 rounded hover:bg-slate-700/80 text-slate-500 hover:text-amber-300 transition-colors">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </span>
+                `;
+                tabBarContainer.appendChild(tabBtn);
+
+                // 2. Create Quick-Launch Card on the Philosophy Home Screen
+                const card = document.createElement('div');
+                card.className = 'glass-panel rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-500/50 transition-all group';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r ${mod.badgeColor} text-slate-950">
+                                ${mod.category}
+                            </span>
+                            <span class="text-xs font-mono text-slate-500">#0${index + 1}</span>
+                        </div>
+                        <h4 class="font-display font-bold text-base sm:text-lg text-white group-hover:text-amber-300 transition-colors mb-1.5">
+                            ${mod.fullTitle}
+                        </h4>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                            ${mod.description}
+                        </p>
+                        <div class="px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800/80 font-mono text-[11px] text-indigo-300 truncate mb-4" title="${mod.filename}">
+                            <i class="fa-regular fa-file-code mr-1 text-slate-500"></i>${mod.filename}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                        <button onclick="selectTab(${index})"
+                                class="flex-1 py-2 px-3 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-window-maximize"></i>
+                            <span>Load in Hub</span>
+                        </button>
+                        <a href="${safeUrl}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                           title="Open ${mod.filename} in a new tab">
+                            <span>New Tab</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+                `;
+                moduleCardsGrid.appendChild(card);
+            });
+        }
+
+        /**
+         * Select a module tab by index, or pass `null` to deselect all tabs and show Soham Sir's Philosophy view.
+         */
+        function selectTab(index) {
+            activeTabIndex = index;
+
+            const welcomeView = document.getElementById('welcomePhilosophyView');
+            const iframeView = document.getElementById('iframeWorkspaceView');
+            const activeControls = document.getElementById('activePageControls');
+            const philosophyBtn = document.getElementById('philosophyBtn');
+            const iframeEl = document.getElementById('contentIframe');
+
+            if (index === null || index === undefined) {
+                // Show Default Philosophy View
+                welcomeView.classList.remove('hidden');
+                iframeView.classList.add('hidden');
+                iframeView.classList.remove('flex');
+                activeControls.classList.add('hidden');
+                activeControls.classList.remove('flex');
+
+                philosophyBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-indigo-600 text-white shadow-md shadow-indigo-600/30';
+                iframeEl.src = 'about:blank';
+            } else {
+                const selectedModule = directoryFiles[index];
+                const safeUrl = getSafeFileUrl(selectedModule.filename);
+
+                // Hide Philosophy View & Show Iframe Workspace
+                welcomeView.classList.add('hidden');
+                iframeView.classList.remove('hidden');
+                iframeView.classList.add('flex');
+                activeControls.classList.remove('hidden');
+                activeControls.classList.add('flex');
+
+                philosophyBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700';
+
+                // Update Header Badges & Links
+                document.getElementById('currentFileNameText').textContent = selectedModule.filename;
+                document.getElementById('currentFileBadge').title = selectedModule.filename;
+                document.getElementById('openNewTabBtn').href = safeUrl;
+
+                // Update Status Bar
+                document.getElementById('statusModuleTitle').textContent = selectedModule.fullTitle;
+                document.getElementById('statusModuleFile').textContent = selectedModule.filename;
+
+                // Load File in Iframe
+                iframeEl.src = safeUrl;
+            }
+
+            // Re-render tab active states
+            renderNavigationAndCards();
+        }
+
+        /**
+         * Reload the currently active module inside the iframe
+         */
+        function reloadCurrentFrame() {
+            if (activeTabIndex === null) return;
+            const iframeEl = document.getElementById('contentIframe');
+            const selectedModule = directoryFiles[activeTabIndex];
+            iframeEl.src = getSafeFileUrl(selectedModule.filename);
+        }
+
+        // Initialize on page load with no tab selected (shows Soham Sir's Philosophy Manifesto)
+        window.addEventListener('DOMContentLoaded', () => {
+            selectTab(null);
+        });
+    </script>
+</body>
+</html>
