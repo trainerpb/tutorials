@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parabola Lab: from focus and directrix to a six</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#fff6d6;--ink:#1b1b2f;--panel:#ffffff;--dot:#f2b8a0;--blue:#2457d6;--pink:#ff5fa2;--yel:#ffd23f;--grn:#1a9d5a;--red:#e63946;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#171a33;--ink:#f5f1e0;--panel:#232850;--dot:#2d3470;--blue:#7ea2ff;--grn:#4fd48d;--red:#ff7b86}}
+:root[data-theme="dark"]{--paper:#171a33;--ink:#f5f1e0;--panel:#232850;--dot:#2d3470;--blue:#7ea2ff;--grn:#4fd48d;--red:#ff7b86}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper) radial-gradient(var(--dot) 1.6px,transparent 1.8px) 0 0/16px 16px;color:var(--ink);font:19px/1.35 'Patrick Hand','Comic Sans MS',cursive,sans-serif}
+header{padding:16px 16px 2px;text-align:center}
+h1{font:clamp(32px,6vw,58px) Bangers,Impact,sans-serif;letter-spacing:2px;margin:0;color:var(--yel);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);transform:rotate(-1deg)}
+header p{margin:6px 0 0}
+main{max-width:1200px;margin:auto;padding:12px;display:flex;flex-wrap:wrap;gap:16px}
+.box{background:var(--panel);border:4px solid var(--ink);border-radius:6px;box-shadow:6px 6px 0 var(--ink);padding:12px}
+#stage{flex:3 1 520px;min-width:0;padding:0;overflow:hidden;align-self:flex-start}
+canvas{display:block;width:100%;height:470px}
+#side{flex:2 1 340px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.cap{background:var(--yel);color:#1b1b2f;border:3px solid #1b1b2f;padding:6px 10px;font:25px Bangers,Impact,sans-serif;letter-spacing:1px;display:inline-block;transform:rotate(-1deg)}
+.ln{margin:8px 0;padding-left:9px;border-left:5px solid var(--pink)}
+.ln b{color:var(--blue)}
+.f{font:16px/1.5 'Courier New',monospace;background:var(--paper);border:2px dashed var(--ink);padding:5px 8px;margin:5px 0;overflow-x:auto;white-space:nowrap}
+.nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+button{font:21px Bangers,Impact,sans-serif;letter-spacing:1px;background:var(--pink);color:#1b1b2f;border:3px solid #1b1b2f;border-radius:6px;padding:3px 14px;box-shadow:3px 3px 0 #1b1b2f;cursor:pointer}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #1b1b2f}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button.alt{background:var(--yel)}
+#dots{display:flex;gap:6px;margin-left:auto}
+#dots i{width:14px;height:14px;border:2px solid var(--ink);border-radius:50%;background:var(--panel)}
+#dots i.on{background:var(--red)}
+label{display:flex;align-items:center;gap:8px;margin:4px 0}
+label span{width:105px;flex:none}
+label b{width:48px;text-align:right;color:var(--red)}
+input[type=range]{flex:1;min-width:0;accent-color:var(--pink)}
+footer{max-width:1200px;margin:0 auto;padding:4px 16px 24px;font-size:16px}
+@media(prefers-reduced-motion:reduce){h1{transform:none}}
+</style></head><body>
+<header><h1>PARABOLA LAB!</h1><p>From focus and directrix all the way to a six over the rope. Press Next to reveal each step.</p></header>
+<main>
+<section class="box" id="stage"><canvas id="cv" aria-label="Interactive parabola diagram"></canvas></section>
+<aside id="side">
+<div class="box"><div class="cap" id="ttl"></div><div id="lines"></div>
+<div class="nav"><button id="back">&laquo; Back</button><button id="next">Next &raquo;</button><div id="dots"></div></div></div>
+<div class="box" id="ctl"></div>
+</aside></main>
+<footer>No air friction, g = 9.8 m/s². The batter is a fictional cricketer and the numbers are for illustration.</footer>
+<script>
+const $=id=>document.getElementById(id),cv=$('cv'),c=cv.getContext('2d'),PI=Math.PI,g=9.8;
+const n2=v=>(+v).toFixed(2),n1=v=>(+v).toFixed(1);
+const V={e:1,ph:110,a2:1.5,t2:4,h3:1,k3:1,a3:1.5,vert:0,A:.5,B:-2,C:3,u5:15,th5:55,h0:1,th6:35,u6:33,d:70};
+let p=0,r=1,prog=0,hold=0,lastTs=0,W,H,VW,ink,blue,grn,red;
+function mk(h0,u,th){const t=th*PI/180,vx=u*Math.cos(t),vy=u*Math.sin(t),T=(vy+Math.sqrt(vy*vy+2*g*h0))/g;return{h0,u,vx,vy,T,R:vx*T,H:h0+vy*vy/(2*g),a:vx*vx/(2*g),D:h0+u*u/(2*g),xv:vx*vy/g,th}}
+const qa=()=>Math.abs(V.A)<.05?.05:V.A;
+const PN=[
+{t:'1: WHAT IS A PARABOLA?',L:()=>[
+`Fix a point <b>F</b> (the <b>focus</b>) and a straight line <b>l</b> (the <b>directrix</b>), with F not on l.`,
+`For any point P, let <b>PF</b> be its distance to the focus and <b>PD</b> its perpendicular distance to the directrix.`,
+`The ratio <b>e = PF / PD</b> is the <b>eccentricity</b>. All points with a fixed e trace a curve called a conic.`,
+`Drag <b>e</b>: below 1 you get an ellipse, above 1 a hyperbola, and exactly <b>e = 1</b> (PF = PD) gives the <b>parabola</b>. Move P around: the ratio never changes.`]},
+{t:'2: THE FORMULA y² = 4ax',L:()=>[
+`Put the focus on the x-axis at <b>F(a, 0)</b> and the directrix as the line <b>x = −a</b>. The vertex, halfway between them, is the origin.`,
+`Take P(x, y). Then <div class="f">PF² = (x − a)² + y²,   PD = x + a</div>`,
+`e = 1 means PF = PD. Square both sides: <div class="f">(x − a)² + y² = (x + a)²</div>`,
+`Expand: x² − 2ax + a² + y² = x² + 2ax + a². Cancel: <div class="f">y² = 4ax</div>`,
+`Vertex (0, 0), axis = the x-axis, and the chord through F (latus rectum) has length <b>4a</b>, from (a, −2a) to (a, 2a). Change a and move P: PF = PD = ${n2(V.t2*V.t2/(4*V.a2)+V.a2)}.`]},
+{t:'3: SHIFT THE FOCUS ANYWHERE',L:()=>{const h=V.h3,k=V.k3,a=V.a3;return[
+`Move the vertex to <b>V(h, k)</b>. Use new coordinates <b>X = x − h</b>, <b>Y = y − k</b>.`,
+`In (X, Y) nothing has changed: <div class="f">Y² = 4aX, focus (a, 0), directrix X = −a</div>`,
+V.vert?`Vertical axis (swap the roles of x and y): <div class="f">(x − h)² = 4a(y − k)</div><div class="f">Focus (h, k + a) = (${n1(h)}, ${n1(k+a)})</div><div class="f">Directrix y = k − a = ${n1(k-a)}</div>`
+:`Replace X and Y: <div class="f">(y − k)² = 4a(x − h)</div><div class="f">Focus (h + a, k) = (${n1(h+a)}, ${n1(k)})</div><div class="f">Directrix x = h − a = ${n1(h-a)}</div>`,
+`Press the axis button to turn the parabola. A negative a would flip it to open the other way. Move h, k and a to put the focus at any point you like.`]}},
+{t:'4: y = Ax² + Bx + C IS A PARABOLA',L:()=>{const A=qa(),B=V.B,C=V.C,h=-B/(2*A),k=C-B*B/(4*A),a=1/(4*A);return[
+`Take any pure quadratic <div class="f">y = Ax² + Bx + C,   A ≠ 0</div>`,
+`Complete the square: <div class="f">y = A(x + B/2A)² + C − B²/4A</div>`,
+`Rearrange: <div class="f">(x − h)² = (1/A)(y − k)</div>with <b>h = −B/2A = ${n2(h)}</b> and <b>k = C − B²/4A = ${n2(k)}</b>.`,
+`Compare with (x − h)² = 4a(y − k): <b>4a = 1/A</b>, so <b>a = 1/4A = ${n2(a)}</b>. It is a parabola, opening up if A > 0 and down if A < 0.`,
+`<div class="f">Focus (h, k + 1/4A) = (${n2(h)}, ${n2(k+a)})</div><div class="f">Directrix y = k − 1/4A = ${n2(k-a)}</div><div class="f">Axis x = ${n2(h)}</div>`]}},
+{t:'5: A STONE THROWN FROM THE GROUND',L:()=>{const o=mk(0,V.u5,V.th5);return[
+`Throw a stone from the ground at speed <b>u</b> and angle <b>θ</b>. With no air friction: <div class="f">x = u cosθ · t,   y = u sinθ · t − ½gt²</div>`,
+`Eliminate t: <div class="f">y = x tanθ − g x² / (2u²cos²θ)</div>A pure quadratic with <b>A = −g/(2u²cos²θ)</b>, <b>B = tanθ</b>, <b>C = 0</b>.`,
+`Vertex: <b>h = −B/2A = u² sinθ cosθ / g = R/2 = ${n2(o.xv)}</b> and <b>k = −B²/4A = u² sin²θ / 2g = H = ${n2(o.H)}</b>. The peak of the flight is the vertex.`,
+`<b>a = 1/4|A| = u² cos²θ / 2g = ${n2(o.a)}</b><div class="f">Focus (R/2, H − a) = (${n2(o.xv)}, ${n2(o.H-o.a)})</div><div class="f">Directrix y = H + a = u²/2g = ${n2(o.D)}</div>The directrix height depends only on the speed, not the angle!`,
+`Press <b>Throw!</b> and watch PF and PD stay equal all along the flight, so <b>e = 1</b>. Change θ: the focus moves, but the directrix stays put.`]}},
+{t:'6: THE SIX!',L:()=>{const o=mk(V.h0,V.u6,V.th6),yd=o.h0+V.d*Math.tan(o.th*PI/180)-g*V.d*V.d/(2*o.vx*o.vx);return[
+`Our batter meets the ball at height <b>h₀</b> with exit speed <b>u</b> at angle <b>θ</b>. The ball starts at (0, h₀): <div class="f">y = h₀ + x tanθ − g x² / (2u²cos²θ)</div>Same A and B as the stone, but now <b>C = h₀</b>.`,
+`Vertex: <b>h = u² sinθ cosθ / g = ${n2(o.xv)} m</b>, peak height <b>H = h₀ + u² sin²θ / 2g = ${n2(o.H)} m</b>.`,
+`<b>a = u² cos²θ / 2g = ${n2(o.a)}</b><div class="f">Focus (${n2(o.xv)}, ${n2(o.H-o.a)})</div><div class="f">Directrix y = h₀ + u²/2g = ${n2(o.D)}</div>e = 1 once more.`,
+`Landing: put y = 0 and solve the quadratic in x. <div class="f">T = (u sinθ + √(u² sin²θ + 2g h₀)) / g = ${n2(o.T)} s</div><div class="f">R = u cosθ × T = ${n2(o.R)} m</div>`,
+`A <b>six</b> means the ball clears the rope at distance d before bouncing, i.e. y(d) > 0. Here y(${V.d}) = <b>${n2(yd)} m</b>, so ${yd>0?'<b>SIX!</b> It crosses the rope still '+n1(yd)+' m above the ground.':'<b>not a six</b>: it lands at '+n1(o.R)+' m, short of the rope. Raise θ or u, or hit it higher.'}`]}}
+];
+const CTL=[
+[{id:'e',l:'Eccentricity e',min:.3,max:2,step:.05},{id:'ph',l:'Move P (°)',min:15,max:345,step:1}],
+[{id:'a2',l:'a',min:.5,max:4,step:.1},{id:'t2',l:'Move P (y)',min:-8,max:8,step:.1}],
+[{id:'h3',l:'h',min:-6,max:6,step:.5},{id:'k3',l:'k',min:-5,max:5,step:.5},{id:'a3',l:'a',min:.5,max:4,step:.1},{btn:'axis'}],
+[{id:'A',l:'A',min:-1.5,max:1.5,step:.05},{id:'B',l:'B',min:-6,max:6,step:.1},{id:'C',l:'C',min:-5,max:5,step:.1}],
+[{id:'u5',l:'Speed u (m/s)',min:5,max:25,step:.5},{id:'th5',l:'Angle θ (°)',min:15,max:80,step:1},{btn:'Throw!'}],
+[{id:'h0',l:'Bat height h₀',min:.5,max:2.5,step:.1},{id:'th6',l:'Angle θ (°)',min:10,max:60,step:1},{id:'u6',l:'Speed u (m/s)',min:20,max:45,step:.5},{id:'d',l:'Rope d (m)',min:60,max:85,step:1},{btn:'Hit!'}]];
+const axT=()=>V.vert?'Axis: vertical':'Axis: horizontal';
+function mkCtl(){const bx=$('ctl');bx.innerHTML='';CTL[p].forEach(o=>{if(o.btn){const b=document.createElement('button');b.className='alt';b.textContent=o.btn=='axis'?axT():o.btn;b.onclick=()=>{if(o.btn=='axis'){V.vert^=1;b.textContent=axT()}prog=0;hold=0;text()};bx.appendChild(b);return}
+const lb=document.createElement('label');lb.innerHTML=`<span>${o.l}</span><input type="range" min="${o.min}" max="${o.max}" step="${o.step}" value="${V[o.id]}"><b></b>`;const i=lb.querySelector('input'),out=lb.querySelector('b');out.textContent=V[o.id];i.oninput=()=>{V[o.id]=+i.value;out.textContent=V[o.id];prog=0;hold=0;text()};bx.appendChild(lb)})}
+function text(){const ls=PN[p].L();$('ttl').textContent=PN[p].t;$('lines').innerHTML=ls.slice(0,r).map(l=>`<div class="ln">${l}</div>`).join('');
+$('back').disabled=p==0&&r==1;$('next').disabled=p==PN.length-1&&r>=ls.length;$('next').innerHTML=r<ls.length?'Next line &raquo;':'Next panel &raquo;';
+[...$('dots').children].forEach((d,i)=>d.classList.toggle('on',i==p))}
+$('next').onclick=()=>{const n=PN[p].L().length;if(r<n)r++;else if(p<PN.length-1){p++;r=1;prog=0;hold=0;mkCtl()}text()};
+$('back').onclick=()=>{if(r>1)r--;else if(p>0){p--;r=PN[p].L().length;prog=0;hold=0;mkCtl()}text()};
+PN.forEach(()=>$('dots').appendChild(document.createElement('i')));
+function size(){const k=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*k;cv.height=H*k;c.setTransform(k,0,0,k,0,0)}
+function sv(x0,x1,y0,y1){const pad=36,s=Math.min((W-2*pad)/(x1-x0),(H-2*pad)/(y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;VW={s,cx,cy,X:x=>W/2+(x-cx)*s,Y:y=>H/2-(y-cy)*s}}
+function ln(x0,y0,x1,y1,col,w=2,d){c.strokeStyle=col;c.lineWidth=w;c.setLineDash(d||[]);c.beginPath();c.moveTo(VW.X(x0),VW.Y(y0));c.lineTo(VW.X(x1),VW.Y(y1));c.stroke();c.setLineDash([])}
+function dot(x,y,col,rr=6){c.fillStyle=col;c.strokeStyle=ink;c.lineWidth=2;c.beginPath();c.arc(VW.X(x),VW.Y(y),rr,0,7);c.fill();c.stroke()}
+function tx(s,x,y,col,dx=8,dy=-8){c.fillStyle=col;c.font='bold 17px Patrick Hand,cursive';c.fillText(s,VW.X(x)+dx,VW.Y(y)+dy)}
+function path(pts,col,w=4){c.strokeStyle=col;c.lineWidth=w;c.beginPath();let pen=false;for(const q of pts){if(!q){pen=false;continue}const X=VW.X(q[0]),Y=VW.Y(q[1]);pen?c.lineTo(X,Y):c.moveTo(X,Y);pen=true}c.stroke()}
+function box(ls){c.font='bold 17px Patrick Hand,cursive';const w=Math.max(...ls.map(l=>c.measureText(l).width))+20;c.fillStyle='#ffd23f';c.strokeStyle='#1b1b2f';c.lineWidth=3;c.beginPath();c.roundRect(10,10,w,ls.length*24+10,8);c.fill();c.stroke();c.fillStyle='#1b1b2f';ls.forEach((l,i)=>c.fillText(l,20,32+i*24))}
+function grid(){const s=VW.s,x0=Math.floor(VW.cx-W/2/s),x1=Math.ceil(VW.cx+W/2/s),y0=Math.floor(VW.cy-H/2/s),y1=Math.ceil(VW.cy+H/2/s);for(let i=x0;i<=x1;i++)ln(i,y0,i,y1,'#8884',1);for(let j=y0;j<=y1;j++)ln(x0,j,x1,j,'#8884',1);ln(x0,0,x1,0,ink,2);ln(x0,0,x1,0,ink,2);ln(0,y0,0,y1,ink,2)}
+const par=(f,a,b,st)=>{const o=[];for(let t=a;t<=b;t+=st)o.push(f(t));return o};
+function flight(o,six){const xr=Math.max(o.R,six?V.d:0),yl=Math.min(0,o.H-o.a),yh=o.D,pd=.09*(yh-yl);sv(-.07*xr,xr*1.07,yl-pd,yh+pd);
+const sky=c.createLinearGradient(0,0,0,VW.Y(0));sky.addColorStop(0,'#7cc7f544');sky.addColorStop(1,'#ffffff00');c.fillStyle=sky;c.fillRect(0,0,W,VW.Y(0));
+c.fillStyle='#43a85155';c.fillRect(0,VW.Y(0),W,H);ln(-1e3,0,1e3,0,grn,3);
+ln(-1e3,o.D,1e3,o.D,red,3,[10,5]);tx('directrix y = '+n1(o.D),xr*.55,o.D,red,0,-8);
+ln(o.xv,yl-pd,o.xv,o.D,ink,1.5,[4,4]);
+path(par(t=>[o.vx*t,o.h0+o.vy*t-.5*g*t*t],0,o.T,o.T/80),blue);
+dot(o.xv,o.H-o.a,grn);tx('F',o.xv,o.H-o.a,grn,10,-8);dot(o.xv,o.H,'#fff',5);tx('V',o.xv,o.H,ink,10,-8);dot(o.R,0,'#ffd23f',5);tx('R = '+n1(o.R),o.R,0,ink,-30,-12);
+if(six){const fh=.12*(yh-yl);ln(V.d,0,V.d,fh,red,4);ln(V.d,fh,V.d+.02*xr,fh*.8,red,4);tx('rope '+V.d,V.d,fh,red,-36,-8)}
+const t=prog*o.T,bx=o.vx*t,by=o.h0+o.vy*t-.5*g*t*t,pf=Math.hypot(bx-o.xv,by-o.H+o.a),pdd=o.D-by;
+ln(bx,by,o.xv,o.H-o.a,grn,3);ln(bx,by,bx,o.D,red,3);dot(bx,by,'#ff5fa2',7);
+c.save();c.translate(VW.X(0),VW.Y(o.h0));c.rotate(-.6);c.fillStyle='#d9b36c';c.strokeStyle=ink;c.lineWidth=2;c.fillRect(-4,-2,9,34);c.strokeRect(-4,-2,9,34);c.restore();
+if(six&&prog<.1){c.fillStyle=red;c.font='30px Bangers,Impact,sans-serif';c.fillText('THWACK!',VW.X(0)+14,VW.Y(o.h0)-18)}
+const ls=['PF = '+n2(pf)+'   PD = '+n2(pdd)+'   e = '+n2(pf/pdd)];box(ls);
+if(six){const ok=o.h0+V.d*Math.tan(o.th*PI/180)-g*V.d*V.d/(2*o.vx*o.vx)>0;c.fillStyle=ok?'#ffd23f':'#fff';c.strokeStyle='#1b1b2f';c.lineWidth=4;c.beginPath();c.roundRect(W-190,10,180,56,10);c.fill();c.stroke();c.fillStyle=ok?'#e63946':'#1b1b2f';c.font='38px Bangers,Impact,sans-serif';c.fillText(ok?'SIX!':'NO SIX',W-170,52)}}
+function draw(){const cs=getComputedStyle(document.documentElement);ink=cs.getPropertyValue('--ink').trim();blue=cs.getPropertyValue('--blue').trim();grn=cs.getPropertyValue('--grn').trim();red=cs.getPropertyValue('--red').trim();
+c.clearRect(0,0,W,H);c.fillStyle=cs.getPropertyValue('--panel').trim();c.fillRect(0,0,W,H);
+if(p==0){sv(-8,14,-9,9);grid();const e=V.e;ln(-2,-9,-2,9,red,3,[8,5]);tx('directrix x = −a',-2,8,red,6,0);
+path(par(f=>{const d=1-e*Math.cos(f),q=4*e/d;return Math.abs(d)<.03||Math.abs(q)>40?null:[2+q*Math.cos(f),q*Math.sin(f)]},0,2*PI,PI/360),blue);
+dot(2,0,grn);tx('F (focus)',2,0,grn,10,-10);const f=V.ph*PI/180,d=1-e*Math.cos(f),q=4*e/d,ty=Math.abs(e-1)<.01?'PARABOLA':e<1?'ELLIPSE':'HYPERBOLA';
+if(Math.abs(d)<.03||Math.abs(q)>40)box(['e = '+n2(e)+'  '+ty,'P is far away here: move P']);else{const x=2+q*Math.cos(f),y=q*Math.sin(f);ln(x,y,2,0,grn,3);ln(x,y,-2,y,red,3);dot(x,y,'#ff5fa2',7);box(['e = '+n2(e)+'  '+ty,'PF = '+n2(Math.abs(q))+'   PD = '+n2(Math.abs(x+2)),'PF / PD = '+n2(Math.abs(q)/Math.abs(x+2))])}}
+else if(p==1){const a=V.a2;sv(-6,14,-8,8);grid();ln(-a,-8,-a,8,red,3,[8,5]);tx('x = −a',-a,7,red,6,0);path(par(t=>[t*t/(4*a),t],-9,9,.1),blue);ln(a,-2*a,a,2*a,ink,2,[5,4]);tx('4a',a,2*a,ink,6,-4);
+dot(a,0,grn);tx('F(a, 0)',a,0,grn,8,18);dot(0,0,'#fff',5);const y=V.t2,x=y*y/(4*a);ln(x,y,a,0,grn,3);ln(x,y,-a,y,red,3);dot(x,y,'#ff5fa2',7);box(['y² = 4ax with a = '+n1(a),'P = ('+n2(x)+', '+n2(y)+')','PF = '+n2(Math.hypot(x-a,y))+'   PD = '+n2(x+a)])}
+else if(p==2){const h=V.h3,k=V.k3,a=V.a3,v=V.vert;sv(-12,12,-9,9);grid();path(par(t=>v?[h+t,k+t*t/(4*a)]:[h+t*t/(4*a),k+t],-14,14,.1),blue);
+const F=v?[h,k+a]:[h+a,k];if(v){ln(-12,k-a,12,k-a,red,3,[8,5]);ln(h,-9,h,9,ink,1.5,[4,4])}else{ln(h-a,-9,h-a,9,red,3,[8,5]);ln(-12,k,12,k,ink,1.5,[4,4])}
+dot(h,k,'#fff',5);tx('V('+n1(h)+', '+n1(k)+')',h,k,ink,8,v?16:-8);dot(F[0],F[1],grn);tx('F('+n1(F[0])+', '+n1(F[1])+')',F[0],F[1],grn,8,-8);box([v?'(x − h)² = 4a(y − k)':'(y − k)² = 4a(x − h)','h = '+n1(h)+', k = '+n1(k)+', a = '+n1(a)])}
+else if(p==3){const A=qa(),B=V.B,C=V.C,h=-B/(2*A),k=C-B*B/(4*A),a=1/(4*A);sv(-12,12,-10,14);grid();path(par(x=>[x,A*x*x+B*x+C],-14,14,.1),blue);
+ln(-14,k-a,14,k-a,red,3,[8,5]);tx('directrix y = '+n2(k-a),-11.5,k-a,red,0,-8);ln(h,-10,h,14,ink,1.5,[4,4]);dot(h,k,'#fff',5);tx('V',h,k,ink,8,A>0?16:-8);dot(h,k+a,grn);tx('F',h,k+a,grn,8,-8);box(['y = '+n2(A)+'x² + '+n2(B)+'x + '+n2(C),'a = 1/4A = '+n2(a)])}
+else flight(p==4?mk(0,V.u5,V.th5):mk(V.h0,V.u6,V.th6),p==5)}
+function tick(ts){const dt=lastTs?Math.min((ts-lastTs)/1000,.1):0;lastTs=ts;
+if(p>=4){if(matchMedia('(prefers-reduced-motion: reduce)').matches)prog=1;else if(prog<1)prog=Math.min(1,prog+dt/3.5);else{hold+=dt;if(hold>1.5){prog=0;hold=0}}}
+draw();requestAnimationFrame(tick)}
+addEventListener('resize',size);size();mkCtl();text();requestAnimationFrame(tick);
+</script></body></html>
