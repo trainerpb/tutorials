@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="spice"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Projectile Feast: motion, parabola and code</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--fz:1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[data-theme=spice]{--bg:#fff3e0;--card:#fffdf8;--ink:#2b1a12;--ac:#e8590c;--ac2:#f59f00;--hl:#ffe8cc;--code:#2b1a12;--ci:#ffe8cc}
+[data-theme=mint]{--bg:#e6fcf5;--card:#fff;--ink:#083d33;--ac:#0ca678;--ac2:#e67700;--hl:#c3fae8;--code:#0b3d33;--ci:#c3fae8}
+[data-theme=midnight]{--bg:#0d1b2a;--card:#14263b;--ink:#e6f1ff;--ac:#4dd0e1;--ac2:#ffca28;--hl:#1f3a5a;--code:#07111c;--ci:#c9f1ff}
+[data-theme=neon]{--bg:#120018;--card:#1e0a2b;--ink:#fdf5ff;--ac:#ff2bd6;--ac2:#b6ff00;--hl:#3a0f55;--code:#0a000f;--ci:#b6ff00}
+[data-theme=candy]{--bg:#fff0f6;--card:#fff;--ink:#3b1a3a;--ac:#d6336c;--ac2:#7048e8;--hl:#ffdeeb;--code:#3b1a3a;--ci:#ffdeeb}
+*{box-sizing:border-box}
+html{font-size:calc(17px*var(--fz))}
+body{margin:0;background:var(--bg) radial-gradient(color-mix(in srgb,var(--ac) 18%,transparent) 1.5px,transparent 1.7px) 0 0/18px 18px;color:var(--ink);font:1rem/1.5 Nunito,system-ui,sans-serif;transition:background .3s,color .3s}
+h1,h2,h3,.logo{font-family:Fredoka,Nunito,sans-serif;margin:.2em 0}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:4px solid var(--ac);padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.logo{font-size:1.35rem;font-weight:700;color:var(--ac)}
+.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+button{font:700 .9rem Fredoka,Nunito,sans-serif;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer;transition:transform .1s,background .2s}
+button:hover{background:var(--hl)}button:active{transform:scale(.95)}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac2);outline-offset:2px}
+.sw{width:26px;height:26px;padding:0;border-radius:50%;border:3px solid var(--ink)}
+.sw.on{outline:3px solid var(--ac2)}
+label{font-size:.85rem;display:flex;gap:4px;align-items:center}
+main{max-width:1150px;margin:auto;padding:14px}
+.card{background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ac);padding:14px 16px;margin:0 0 18px}
+.hero{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border-radius:22px;padding:16px;border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);margin-bottom:18px}
+.hero h1{font-size:clamp(1.8rem,5vw,3rem);text-shadow:3px 3px 0 rgba(0,0,0,.25)}
+.hero canvas{width:100%;height:150px;display:block;background:#0003;border-radius:14px;margin-top:8px}
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.menu .card{margin:0}.menu h3{color:var(--ac)}
+.pgrid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pb{width:2.4rem;height:2.4rem;padding:0;border-radius:12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;align-items:start}
+.q{font-size:1.1rem;font-weight:700}
+.ans{background:var(--hl);border-left:6px solid var(--ac);padding:8px 12px;border-radius:8px;font-weight:700;margin-top:10px}
+.code{background:var(--code);color:var(--ci);border-radius:12px;padding:10px 12px;font:.85rem/1.5 'JetBrains Mono',ui-monospace,monospace;overflow-x:auto}
+.row{display:flex;gap:10px;padding:2px 4px;border-radius:6px}
+.row.hl{background:color-mix(in srgb,var(--ac) 35%,transparent)}
+.no{opacity:.55;min-width:1.6em;text-align:right;user-select:none}
+pre{margin:0;white-space:pre;font:inherit}
+.ex{font:.9rem/1.4 Nunito,sans-serif;opacity:.78;margin:0 0 8px 2.5em}
+.ex.now{opacity:1;color:var(--ac2);font-weight:700}
+.bar{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.cnt{margin-left:auto;font-weight:700}
+.hint{margin:0;opacity:.8}
+.note{font-size:.9rem;opacity:.85}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<header>
+<span class="logo">🍽 Projectile Feast</span>
+<div class="grp" id="tabs"><button data-v="menu">Menu</button><button data-v="toolkit">Toolkit</button><button data-v="problems">20 Problems</button></div>
+<div class="grp"><button id="py">Python</button><button id="jv">Java</button></div>
+<div class="grp" id="sws" aria-label="Theme"></div>
+<div class="grp"><button id="fm" aria-label="Smaller text">A−</button><button id="fp" aria-label="Bigger text">A+</button><button id="rd">🔊 Read</button><label><input type="checkbox" id="au"> auto-read steps</label><button id="fs">⛶ Full screen</button></div>
+</header>
+<main id="view"></main>
+<script>
+const $=id=>document.getElementById(id),G=9.8,rad=d=>d*Math.PI/180,f=v=>(+v).toFixed(2);
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let S={theme:'spice',fz:1,lang:'py',auto:false,view:'menu',pi:0,n:0},raf=0;
+if(matchMedia('(prefers-color-scheme: dark)').matches)S.theme='midnight';
+try{Object.assign(S,JSON.parse(localStorage.getItem('pf')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('pf',JSON.stringify({theme:S.theme,fz:S.fz,lang:S.lang,auto:S.auto}))}catch(e){}};
+const TH={spice:'#e8590c',mint:'#0ca678',midnight:'#4dd0e1',neon:'#ff2bd6',candy:'#d6336c'};
+const TK={py:[
+['import math','Bring in sin, cos, sqrt and radians from the maths library.'],
+['G = 9.8','Gravity in m/s². A named constant beats a "magic number" scattered around.'],
+['def height_at(u, theta, t, **kw):','Required inputs: u, theta, t. The <b>**kw</b> collects any extra named arguments (like h0=1.0) into a dictionary called kw. These are <b>kwargs</b>.'],
+['    h0, g = kw.get("h0", 0), kw.get("g", G)','Read the optional values from kw; if the caller skipped them, use the defaults 0 and G.'],
+['    th = math.radians(theta)','sin and cos expect radians, so convert from degrees.'],
+['    return h0 + u*math.sin(th)*t - 0.5*g*t*t','Vertical position y = h₀ + u sinθ·t − ½gt²: start height, plus upward motion, minus gravity.'],
+['dist_at = lambda u, theta, t: u*math.cos(math.radians(theta))*t','A <b>lambda</b> is a one-line nameless function: arguments, a colon, then the result. Horizontal distance x = u cosθ·t, because horizontal speed never changes.'],
+['def speed_at(u, theta, t, g=G):','g=G is a default parameter: it is used when the caller passes nothing.'],
+['    vx = u*math.cos(math.radians(theta)); vy = u*math.sin(math.radians(theta)) - g*t','Horizontal velocity stays u cosθ; vertical velocity loses g every second.'],
+['    return math.hypot(vx, vy)','Speed is the length of the velocity vector: √(vx² + vy²).'],
+['def flight_time(u, theta, **kw):','Time until the ball is back at y = 0, again with optional kwargs.'],
+['    h0, g = kw.get("h0", 0), kw.get("g", G)','The same optional h0 and g as before.'],
+['    vy = u*math.sin(math.radians(theta))','Initial upward speed.'],
+['    return (vy + math.sqrt(vy*vy + 2*g*h0)) / g','The positive root of h₀ + vy·t − ½gt² = 0. With h0 = 0 it becomes 2vy/g.'],
+['max_height = lambda u, theta, h0=0, g=G: h0 + (u*math.sin(math.radians(theta)))**2/(2*g)','Another lambda. At the top the vertical speed is zero, so the rise is vy²/2g above the start height.'],
+['range_ = lambda u, theta, **kw: u*math.cos(math.radians(theta))*flight_time(u, theta, **kw)','Range = horizontal speed × flight time. **kw passes an optional h0 straight through.'],
+['make_path = lambda u, theta: (lambda t: height_at(u, theta, t))','A lambda that returns a lambda: path = make_path(20, 30) gives a function path(t) that remembers u and θ.'],
+['focus_dir = lambda u, theta, g=G: (u*u*math.sin(2*math.radians(theta))/(2*g), -u*u*math.cos(2*math.radians(theta))/(2*g), u*u/(2*g))','Parabola facts for a ground launch: focus x = R/2, focus y = −u²cos2θ/2g, directrix y = u²/2g.'],
+['quad_focus = lambda A, B, C: (-B/(2*A), C-B*B/(4*A)+1/(4*A), C-B*B/(4*A)-1/(4*A))','For y = Ax²+Bx+C: axis x = −B/2A, focus y = k + 1/4A, directrix y = k − 1/4A, where k = C − B²/4A.']],
+jv:[
+['import java.util.function.DoubleUnaryOperator;','Java lambdas need a functional interface. DoubleUnaryOperator means: takes a double, returns a double.'],
+['public class Toolkit {','One class holds all our methods.'],
+['    static final double G = 9.8;','Gravity constant shared by every method.'],
+['    static double heightAt(double u, double theta, double t, double h0) {','Java has no **kwargs. Optional inputs are passed by position, or handled by overloading (see line 7).'],
+['        double th = Math.toRadians(theta);','Degrees to radians for Math.sin and Math.cos.'],
+['        return h0 + u*Math.sin(th)*t - 0.5*G*t*t; }','y = h₀ + u sinθ·t − ½gt².'],
+['    static double heightAt(double u, double theta, double t) { return heightAt(u, theta, t, 0); }','<b>Overloading</b>: same name, fewer parameters, default h0 = 0. This is Java\'s answer to Python\'s optional kwargs.'],
+['    static double distAt(double u, double theta, double t) { return u*Math.cos(Math.toRadians(theta))*t; }','x = u cosθ·t: horizontal speed is constant.'],
+['    static double speedAt(double u, double theta, double t) {','Speed at time t.'],
+['        double vx = u*Math.cos(Math.toRadians(theta)), vy = u*Math.sin(Math.toRadians(theta)) - G*t;','vx never changes; vy loses G every second.'],
+['        return Math.hypot(vx, vy); }','√(vx² + vy²).'],
+['    static double flightTime(double u, double theta, double h0) {','Time of flight from start height h0.'],
+['        double vy = u*Math.sin(Math.toRadians(theta));','Initial upward speed.'],
+['        return (vy + Math.sqrt(vy*vy + 2*G*h0)) / G; }','The positive root of h₀ + vy·t − ½Gt² = 0.'],
+['    static double maxHeight(double u, double theta, double h0) { double vy = u*Math.sin(Math.toRadians(theta)); return h0 + vy*vy/(2*G); }','Top of the flight: h₀ + vy²/2g.'],
+['    static double range(double u, double theta, double h0) { return u*Math.cos(Math.toRadians(theta))*flightTime(u, theta, h0); }','Range = horizontal speed × flight time.'],
+['    static DoubleUnaryOperator makePath(double u, double theta) { return t -> heightAt(u, theta, t); }','A <b>lambda</b>: parameter, arrow, expression. The method returns a little function that remembers u and θ; call it with path.applyAsDouble(t).'],
+['    static double[] focusDir(double u, double theta) { double s2 = Math.toRadians(2*theta); return new double[]{u*u*Math.sin(s2)/(2*G), -u*u*Math.cos(s2)/(2*G), u*u/(2*G)}; }','Returns three numbers in an array: focus x, focus y, directrix y.'],
+['    static double[] quadFocus(double A, double B, double C) { double k = C - B*B/(4*A); return new double[]{-B/(2*A), k + 1/(4*A), k - 1/(4*A)}; }','For y = Ax²+Bx+C: axis x, focus y and directrix y from the completed square.'],
+['}','Close the class.']]};
+const P=[
+{k:'H',g:{u:20,theta:30,t:2},q:'A stone is thrown from the ground at u = 20 m/s at θ = 30°. How high is it after 2 s?',ph:'Only the vertical motion matters for height. The stone starts upward at u sinθ = 10 m/s while gravity pulls it down at 9.8 m/s².',m:'y = u sinθ·t − ½gt² = 10×2 − 4.9×4 = 20 − 19.6 = 0.4 m. It is almost back on the ground.'},
+{k:'X',g:{u:20,theta:30,t:2},q:'Same stone: how far has it travelled horizontally after 2 s?',ph:'Nothing pushes sideways (no air friction), so horizontal speed stays u cosθ for the whole flight.',m:'x = u cosθ·t = 17.32 × 2 ≈ 34.64 m. Distance is just speed × time.'},
+{k:'S',g:{u:20,theta:30,t:2},q:'Same stone: what is its speed after 2 s?',ph:'Velocity has two parts: vx stays 17.32 m/s, vy = 10 − 9.8×2 = −9.6 m/s (now falling). Speed is the size of the velocity vector.',m:'v = √(vx² + vy²) = √(17.32² + 9.6²) ≈ 19.80 m/s (Pythagoras).'},
+{k:'T',g:{u:20,theta:30},q:'How long does the stone (20 m/s, 30°) stay in the air?',ph:'It rises until vy = 0 (time u sinθ/g) and then falls back the same way, so the total is twice that.',m:'T = 2u sinθ/g = 2×10/9.8 ≈ 2.04 s.'},
+{k:'M',g:{u:20,theta:30},q:'What is the maximum height of the stone (20 m/s, 30°)?',ph:'At the top vertical speed is zero. Energy view: ½m(u sinθ)² turns into mgH.',m:'Use v² = u² − 2gH with v = 0: H = (u sinθ)²/2g = 100/19.6 ≈ 5.10 m.'},
+{k:'R',g:{u:20,theta:30},q:'What is the horizontal range of the stone (20 m/s, 30°)?',ph:'Range = horizontal speed × time of flight = (u cosθ)(2u sinθ/g).',m:'R = u² sin2θ/g (using 2 sinθ cosθ = sin2θ) = 400×0.866/9.8 ≈ 35.35 m.'},
+{k:'R',g:{u:20,theta:60},q:'Same speed, but thrown at 60°. Compare the range with Problem 6.',ph:'A steeper throw stays up longer but travels more slowly sideways; the two effects can cancel.',m:'sin(2×60°) = sin120° = sin60° = sin(2×30°), so R is the same ≈ 35.35 m. Complementary angles (θ and 90° − θ) give equal range.'},
+{k:'R',g:{u:25,theta:45},q:'A footballer kicks at 25 m/s. At 45° what range does he get?',ph:'The best compromise between time in the air and sideways speed is 45° (for launch and landing at the same height).',m:'R = u²sin2θ/g is largest when sin2θ = 1, i.e. θ = 45°: R = 625/9.8 ≈ 63.78 m.'},
+{k:'S',g:{u:20,theta:30,t:1.0204},q:'What is the stone\'s speed at the highest point (t = u sinθ/g ≈ 1.0204 s)?',ph:'At the top vy = 0, so only the horizontal velocity is left. The speed there is the <i>minimum</i> speed of the flight.',m:'v = √(vx² + 0) = u cosθ = 20 × 0.866 ≈ 17.32 m/s.'},
+{k:'H',g:{u:25,theta:53,t:3},q:'A ball is thrown from the ground at 25 m/s, 53°. How high is it at t = 3 s?',ph:'Upward start speed u sinθ ≈ 19.97 m/s. After 3 s gravity has taken away 29.4 m/s of it, so the ball is on its way down.',m:'y = 19.97×3 − 4.9×9 ≈ 59.90 − 44.10 ≈ 15.8 m.'},
+{k:'T',g:{u:34,theta:35,h0:1},q:'A batter meets the ball 1.0 m above the ground with u = 34 m/s at 35°. How long is the ball in the air?',ph:'It starts at h₀ = 1 m, so it falls farther than it rose and stays up longer than 2u sinθ/g.',m:'Solve 1 + (u sinθ)t − 4.9t² = 0 → t = [vy + √(vy² + 2g·h₀)]/g with vy = 34 sin35° ≈ 19.50. Only the positive root is physical.'},
+{k:'M',g:{u:34,theta:35,h0:1},q:'Same hit: what is the greatest height above the ground?',ph:'At the peak vertical speed is zero. The extra rise is (u sinθ)²/2g on top of the 1 m start height.',m:'H = h₀ + vy²/(2g) = 1 + 380.3/19.6 ≈ 20.4 m. This is the vertex of the parabola.'},
+{k:'R',g:{u:34,theta:35,h0:1},q:'Same hit: how far does it land? Is it a six if the rope is 70 m away?',ph:'Horizontal speed is constant, so range = u cosθ × T. It is a six when the ball is still in the air at the rope (it has not bounced).',m:'R = vx·T. If R > 70 m the ball is still above ground at 70 m because the path only goes down after the peak.'},
+{k:'H',g:{u:34,theta:35,t:2.51,h0:1},q:'Same hit: how high is the ball when it reaches the rope? (t = 70/(u cosθ) ≈ 2.51 s)',ph:'Distance ÷ horizontal speed gives the time to the rope; then put that time into the vertical equation.',m:'t = 70/27.85 ≈ 2.51 s; y = 1 + 19.50×2.51 − 4.9×2.51² ≈ 19 m. Clearly a six!'},
+{k:'X',g:{u:34,theta:35,t:2.51},q:'Check Problem 13: how far has the ball travelled at t = 2.51 s?',ph:'Verifying a result with the other formula is a good habit: x = u cosθ·t should be the rope distance.',m:'x = 27.85 × 2.51 ≈ 69.9 m ≈ 70 m. ✓'},
+{k:'F',g:{u:20,theta:30},q:'Find the focus and directrix of the stone\'s parabola (20 m/s, 30°, from the ground).',ph:'The stone\'s path is a parabola with its vertex at the peak. The directrix height u²/2g is the height reached if you throw the stone straight up at the same speed.',m:'Focus (R/2, −u²cos2θ/2g), directrix y = u²/2g. For θ < 45° cos2θ > 0, so the focus lies below the ground.'},
+{k:'F',g:{u:20,theta:45},q:'Repeat for θ = 45°. What is special?',ph:'45° is the best-range angle. The geometry is neat too.',m:'cos(90°) = 0, so the focus y is 0: the focus sits exactly on the ground, at R/2.'},
+{k:'Q',g:{A:0.5,B:-2,C:3},q:'Find the axis, focus and directrix of y = 0.5x² − 2x + 3.',ph:'Any constant-acceleration path under gravity gives a quadratic like this, so the same method applies.',m:'Complete the square: y = 0.5(x − 2)² + 1, vertex (2, 1). 4a = 1/A = 2, so a = 0.5: focus (2, 1.5), directrix y = 0.5.'},
+{k:'Q',g:{A:-0.05,B:1.2,C:0},q:'A stone\'s path is y = −0.05x² + 1.2x (metres). Find the peak\'s x, the focus and the directrix.',ph:'A < 0 means the parabola opens downward, as a thrown object\'s path does. The roots x = 0 and x = 24 are launch and landing.',m:'Axis x = −B/2A = 12 m; peak y = 7.2 m; a = 1/(4A) = −5, so focus y = 7.2 − 5 = 2.2 and directrix y = 7.2 + 5 = 12.2.'},
+{k:'P',g:{u:15,theta:50},q:'Make a path function for u = 15 m/s, θ = 50° and use it to list the height at t = 1, 2 and 3 s.',ph:'A function that remembers u and θ lets us ask "how high at time t?" again and again. A negative height means the ball has already landed.',m:'vy ≈ 11.49: y(1) ≈ 6.59, y(2) ≈ 3.38, y(3) ≈ −9.63. Flight time is only ≈ 2.35 s, so y(3) is meaningless as a real height.'}
+];
+const NM={H:['height_at','heightAt','height y','m'],X:['dist_at','distAt','distance x','m'],S:['speed_at','speedAt','speed','m/s'],T:['flight_time','flightTime','flight time','s'],M:['max_height','maxHeight','max height','m'],R:['range_','range','range','m']};
+const EX={H:'Our toolkit: y = h₀ + u sinθ·t − ½gt².',X:'x = u cosθ·t; horizontal speed never changes.',S:'√(vx² + vy²) with vy = u sinθ − g t.',T:'Positive root of h₀ + u sinθ·t − ½gt² = 0.',M:'H = h₀ + (u sinθ)²/2g.',R:'R = u cosθ × flight time.'};
+const NAME={u:'speed u (m/s)',theta:'angle θ (degrees)',t:'time t (s)',h0:'start height h₀ (m)',A:'A',B:'B',C:'C'};
+function gen(p,L){const g=p.g,ks=Object.keys(g),py=L=='py',k=p.k,h=g.h0!=null,o=[];
+o.push([py?ks.join(', ')+' = '+ks.map(x=>g[x]).join(', '):'double '+ks.map(x=>x+' = '+g[x]).join(', ')+';','Store the inputs: '+ks.map(x=>NAME[x]).join(', ')+'.'+(py?'':' Put this inside main().')]);
+if(k=='P'){if(!py)o.unshift(['import java.util.function.DoubleUnaryOperator;','Needed for the lambda type.']);
+o.push([py?'path = make_path(u, theta)':'DoubleUnaryOperator path = Toolkit.makePath(u, theta);','make_path returns a lambda: a tiny function that remembers u and θ.']);
+o.push([py?'print([round(path(t), 2) for t in (1, 2, 3)])':'for (double t : new double[]{1, 2, 3}) System.out.printf("%.2f ", path.applyAsDouble(t));','Call path for t = 1, 2, 3 and print each result to 2 decimals.'+(py?' The [... for ... in ...] part is a list comprehension.':'')]);return o}
+if(k=='F'||k=='Q'){const F=k=='F',a=F?'u, theta':'A, B, C';
+o.push([py?(F?'fx, fy, d = focus_dir(u, theta)':'h, fy, d = quad_focus(A, B, C)'):`double[] r = Toolkit.${F?'focusDir':'quadFocus'}(${a});`,(F?'Returns (focus x, focus y, directrix y).':'Returns (axis x, focus y, directrix y).')+(py?' Python unpacks the tuple into three names.':' Java returns the three numbers in an array.')]);
+const w=F?'focus = ({0}, {1}), directrix y = {2}':'axis x = {0}, focus y = {1}, directrix y = {2}',v=F?['fx','fy','d']:['h','fy','d'];
+o.push([py?`print(f"${w.replace(/\{(\d)\}/g,(m,i)=>'{'+v[i]+':.2f}')}")`:`System.out.printf("${w.replace(/\{\d\}/g,'%.2f')}%n", r[0], r[1], r[2]);`,'Print all three values to 2 decimals.']);return o}
+const n=NM[k],t='HXS'.includes(k),ar=py?'u, theta'+(t?', t':'')+(h&&'HTMR'.includes(k)?', h0=h0':''):'u, theta, '+(t?'t'+(h&&k=='H'?', h0':''):(h?'h0':'0'));
+o.push([py?`r = ${n[0]}(${ar})`:`double r = Toolkit.${n[1]}(${ar});`,EX[k]+(h?(py?' The keyword h0=h0 lands in **kw inside the function.':' Java has no keyword arguments, so h0 is passed by position.'):'')]);
+const lb=n[2]+' = ';o.push([py?`print(f"${lb}{r:.2f} ${n[3]}")`:`System.out.printf("${lb}%.2f ${n[3]}%n", r);`,'Print the answer rounded to 2 decimals, with its unit.']);return o}
+function solve(p){const {u,theta:th,t,h0=0,A,B,C}=p.g,vy=u*Math.sin(rad(th)||0),vx=u*Math.cos(rad(th)||0),T=(vy+Math.sqrt(vy*vy+2*G*h0))/G;
+switch(p.k){case'H':{const y=h0+vy*t-.5*G*t*t;return`height y = ${f(y)} m`+(y<0?' (negative: already landed)':'')}
+case'X':return`distance x = ${f(vx*t)} m`;case'S':return`speed = ${f(Math.hypot(vx,vy-G*t))} m/s`;case'T':return`flight time = ${f(T)} s`;case'M':return`max height = ${f(h0+vy*vy/(2*G))} m`;case'R':return`range = ${f(vx*T)} m`+(h0&&vx*T>70?' (more than 70 m: SIX!)':'');
+case'F':return`focus = (${f(u*u*Math.sin(rad(2*th))/(2*G))}, ${f(-u*u*Math.cos(rad(2*th))/(2*G))}), directrix y = ${f(u*u/(2*G))}`;
+case'Q':{const k=C-B*B/(4*A);return`axis x = ${f(-B/(2*A))}, focus y = ${f(k+1/(4*A))}, directrix y = ${f(k-1/(4*A))}`}
+default:return[1,2,3].map(s=>f(vy*s-.5*G*s*s)).join(', ')+' m'}}
+const cur=()=>S.view=='toolkit'?TK[S.lang]:gen(P[S.pi],S.lang);
+function stepper(ls){const n=Math.min(S.n,ls.length);return`<div class="code">${n?ls.slice(0,n).map((l,i)=>`<div class="row${i==n-1?' hl':''}"><span class="no">${i+1}</span><pre>${esc(l[0])}</pre></div><div class="ex rd${i==n-1?' now':''}">💬 ${l[1]}</div>`).join(''):'<p class="hint">Press "Next line" to write the first line of code.</p>'}</div><div class="bar"><button onclick="step(1)">Next line ▶</button><button onclick="step(2)">Show all</button><button onclick="step(0)">Restart</button><span class="cnt">${n}/${ls.length}</span></div>`}
+function step(m){const ls=cur();S.n=m==1?Math.min(S.n+1,ls.length):m==2?ls.length:0;$('stp').innerHTML=stepper(ls);if(S.auto&&m==1)say('Line '+S.n+'. '+ls[S.n-1][1].replace(/<[^>]+>/g,''))}
+function say(s){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(s);u.rate=.95;u.onend=()=>$('rd').textContent='🔊 Read';speechSynthesis.speak(u);$('rd').textContent='⏹ Stop'}
+function pick(i){S.pi=i;S.n=0;render()}
+function go(v){S.view=v;S.n=0;render()}
+function menu(){return`<section class="hero"><h1>Today's menu: three dishes, one meal</h1><div class="rd">Different dishes make a meal, and different topics make a lesson. Physics tells us the formula, maths shows us the shape, and code gives the answer in a blink.</div><canvas id="hc" aria-label="Animated ball on a parabola with focus and directrix"></canvas></section>
+<div class="menu"><div class="card"><h3>🥗 Starter: 2D motion under gravity</h3><p class="rd">Sideways and up-down motion are independent. x = u cosθ·t and y = u sinθ·t − ½gt². We find height, distance and speed at any moment.</p></div>
+<div class="card"><h3>🍛 Main: the parabola</h3><p class="rd">A parabola is the set of points equally far from a focus and a directrix, so e = PF/PD = 1. Eliminating t gives a quadratic y = Ax² + Bx + C, and we can read off its focus and directrix.</p></div>
+<div class="card"><h3>🥖 Side dishes: Python and Java</h3><p class="rd">Python: **kwargs for optional inputs, and lambda for one-line functions. Java: method overloading and lambdas with DoubleUnaryOperator. The same toolkit is written in both languages, side by side.</p></div>
+<div class="card"><h3>🧰 The sauce: our Toolkit</h3><p class="rd">Methods that accept parameters and return height, distance, speed, flight time, range, focus and directrix. We write it one line at a time.</p><button onclick="go('toolkit')">Open the Toolkit</button></div>
+<div class="card"><h3>🍰 Dessert: 20 problems</h3><p class="rd">Each problem is discussed with physics and maths first, then solved in code, one numbered line at a time. It ends with a cricket six.</p><button onclick="go('problems')">Start the problems</button></div></div>`}
+function toolkit(){const py=S.lang=='py';return`<section class="card"><h2>🧰 The Toolkit in ${py?'Python':'Java'}</h2><p class="note rd">${py?'Kwargs in 20 seconds: <b>def f(a, **kw)</b> accepts f(1, h0=2); kw is {"h0": 2}. Lambda in 20 seconds: <b>square = lambda x: x*x</b>.':'Java has no kwargs, so we overload methods. Lambda in 20 seconds: <b>DoubleUnaryOperator square = x -> x*x;</b> then square.applyAsDouble(3).'} Switch the language at the top any time.</p><div id="stp">${stepper(cur())}</div></section>`}
+function problems(){const i=S.pi,p=P[i];return`<div class="pgrid">${P.map((_,j)=>`<button class="pb${j==i?' on':''}" onclick="pick(${j})" aria-label="Problem ${j+1}">${j+1}</button>`).join('')}</div>
+<div class="two"><section class="card"><h2>Problem ${i+1} of 20</h2><p class="q rd">${p.q}</p><h3>🔬 Physics</h3><p class="rd">${p.ph}</p><h3>📐 Maths</h3><p class="rd">${p.m}</p><div class="ans rd">✅ Answer: ${solve(p)}</div></section>
+<section class="card"><h2>💻 Code it in ${S.lang=='py'?'Python':'Java'}</h2><p class="note">Uses the Toolkit methods. ${S.lang=='py'?'Paste the Toolkit first, or keep it in toolkit.py.':'The Toolkit class goes in its own file.'}</p><div id="stp">${stepper(gen(p,S.lang))}</div></section></div>`}
+function hero(ts){const c=$('hc');if(!c||!c.isConnected)return;const x=c.getContext('2d'),r=devicePixelRatio||1,W=c.clientWidth,H=c.clientHeight;if(c.width!=W*r){c.width=W*r;c.height=H*r}x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,W,H);
+const g0=H-18,x0=W*.1,x1=W*.9,pk=H*.22,xm=(x0+x1)/2,K=(g0-pk)/((xm-x0)**2),a=1/(4*K),u=matchMedia('(prefers-reduced-motion: reduce)').matches?.5:(ts/3200)%1,bx=x0+(x1-x0)*u,by=g0-K*((xm-x0)**2-(bx-xm)**2);
+x.strokeStyle='#fff';x.lineWidth=2;x.setLineDash([8,6]);x.beginPath();x.moveTo(0,pk-a);x.lineTo(W,pk-a);x.stroke();x.setLineDash([]);
+x.lineWidth=3;x.beginPath();for(let i=0;i<=60;i++){const px=x0+(x1-x0)*i/60,py=g0-K*((xm-x0)**2-(px-xm)**2);i?x.lineTo(px,py):x.moveTo(px,py)}x.stroke();
+x.fillStyle='#fff';x.font='bold 14px Nunito,sans-serif';x.fillText('directrix',8,pk-a-6);x.beginPath();x.arc(xm,pk+a,5,0,7);x.fill();x.fillText('focus',xm+9,pk+a+4);
+x.strokeStyle='#ffffffaa';x.lineWidth=1.5;x.beginPath();x.moveTo(bx,by);x.lineTo(xm,pk+a);x.moveTo(bx,by);x.lineTo(bx,pk-a);x.stroke();
+x.fillStyle='#ffd23f';x.strokeStyle='#1b1b2f';x.lineWidth=3;x.beginPath();x.arc(bx,by,9,0,7);x.fill();x.stroke();raf=requestAnimationFrame(hero)}
+function render(){cancelAnimationFrame(raf);document.documentElement.dataset.theme=S.theme;document.documentElement.style.setProperty('--fz',S.fz);
+$('py').classList.toggle('on',S.lang=='py');$('jv').classList.toggle('on',S.lang=='jv');$('au').checked=S.auto;
+document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v==S.view));
+document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.t==S.theme));
+$('view').innerHTML=S.view=='menu'?menu():S.view=='toolkit'?toolkit():problems();if(S.view=='menu')raf=requestAnimationFrame(hero);save()}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+$('py').onclick=()=>{S.lang='py';S.n=0;render()};$('jv').onclick=()=>{S.lang='jv';S.n=0;render()};
+Object.keys(TH).forEach(t=>{const b=document.createElement('button');b.className='sw';b.dataset.t=t;b.title=t;b.setAttribute('aria-label','Theme '+t);b.style.background=TH[t];b.onclick=()=>{S.theme=t;render()};$('sws').appendChild(b)});
+$('fm').onclick=()=>{S.fz=Math.max(.8,+(S.fz-.1).toFixed(1));render()};$('fp').onclick=()=>{S.fz=Math.min(1.8,+(S.fz+.1).toFixed(1));render()};
+$('au').onchange=e=>{S.auto=e.target.checked;save()};
+$('rd').onclick=()=>{if(!window.speechSynthesis)return;if(speechSynthesis.speaking){speechSynthesis.cancel();$('rd').textContent='🔊 Read';return}const t=[...document.querySelectorAll('.rd')].map(e=>e.innerText).join('. ');say(t||'Nothing to read yet.')};
+if(document.fullscreenEnabled){$('fs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}}else $('fs').hidden=true;
+render();
+</script></body></html>

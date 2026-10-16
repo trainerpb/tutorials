@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Gum Parabola – Horizontal Projectile Comic</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#fff6d6;--ink:#1b1b2f;--panel:#ffffff;--dot:#f2b8a0;--blue:#2457d6;--pink:#ff5fa2;--yel:#ffd23f;--grn:#1a9d5a;--red:#e63946;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#171a33;--ink:#f5f1e0;--panel:#232850;--dot:#2d3470;--blue:#7ea2ff;--grn:#4fd48d;--red:#ff7b86}}
+:root[data-theme="dark"]{--paper:#171a33;--ink:#f5f1e0;--panel:#232850;--dot:#2d3470;--blue:#7ea2ff;--grn:#4fd48d;--red:#ff7b86}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper) radial-gradient(var(--dot) 1.6px,transparent 1.8px) 0 0/16px 16px;color:var(--ink);font:19px/1.35 'Patrick Hand','Comic Sans MS',cursive,sans-serif}
+header{padding:18px 16px 4px;text-align:center}
+h1{font:clamp(34px,7vw,64px) Bangers,Impact,sans-serif;letter-spacing:2px;margin:0;color:var(--yel);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);transform:rotate(-1.5deg)}
+header p{margin:8px 0 0}
+main{max-width:1150px;margin:auto;padding:12px;display:flex;flex-wrap:wrap;gap:16px}
+.box{background:var(--panel);border:4px solid var(--ink);border-radius:6px;box-shadow:6px 6px 0 var(--ink);padding:12px}
+#stage{flex:2 1 560px;min-width:0;position:relative;padding:0;overflow:hidden}
+canvas{display:block;width:100%;height:440px}
+#side{flex:1 1 320px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.cap{background:var(--yel);color:#1b1b2f;border:3px solid #1b1b2f;padding:6px 10px;font:26px Bangers,Impact,sans-serif;letter-spacing:1px;display:inline-block;transform:rotate(-1deg)}
+#text{margin-top:8px;min-height:170px}
+#text b{color:var(--blue)}
+.f{font:17px/1.5 'Courier New',monospace;background:var(--paper);border:2px dashed var(--ink);padding:6px 8px;margin:6px 0;overflow-x:auto;white-space:nowrap}
+.nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:22px Bangers,Impact,sans-serif;letter-spacing:1px;background:var(--pink);color:#1b1b2f;border:3px solid #1b1b2f;border-radius:6px;padding:4px 14px;box-shadow:3px 3px 0 #1b1b2f;cursor:pointer}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #1b1b2f}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,#dots i:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button.alt{background:var(--yel)}
+#dots{display:flex;gap:6px;margin-left:auto}
+#dots i{width:14px;height:14px;border:2px solid var(--ink);border-radius:50%;background:var(--panel);cursor:pointer}
+#dots i.on{background:var(--red)}
+label{display:flex;align-items:center;gap:8px;margin:4px 0}
+label span{width:100px;flex:none}
+input[type=range]{flex:1;min-width:0;accent-color:var(--pink)}
+.ro{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:6px}
+.ro div{border-bottom:2px dotted var(--ink)}
+.ro b{float:right;color:var(--red)}
+#e{font:30px Bangers,Impact,sans-serif;color:var(--grn);text-align:center}
+footer{max-width:1150px;margin:0 auto;padding:4px 16px 24px;font-size:16px}
+@media(prefers-reduced-motion:reduce){h1{transform:none}}
+</style></head><body>
+<header><h1>THE GUM PARABOLA!</h1><p>The batter spits his gum exactly sideways. Follow it panel by panel and prove the path is a parabola.</p></header>
+<main>
+<section class="box" id="stage"><canvas id="cv" aria-label="Animated horizontal spit of a chewing gum with focus and directrix"></canvas></section>
+<aside id="side">
+<div class="box"><div class="cap" id="ttl"></div><div id="text"></div>
+<div class="nav"><button id="prev">&laquo; Back</button><button id="next">Next &raquo;</button><button id="play" class="alt">&#9654; Spit!</button><div id="dots"></div></div></div>
+<div class="box">
+<label><span>Speed u</span><input id="u" type="range" min="2" max="7" step="0.1" value="5"><b id="uv"></b></label>
+<label><span>Gravity g</span><input id="g" type="range" min="3.7" max="25" step="0.1" value="9.8"><b id="gv"></b></label>
+<label><span>Time t</span><input id="t" type="range" min="0" max="1000" value="0"><b id="tv"></b></label>
+<div class="ro" id="ro"></div>
+<div id="e"></div></div>
+</aside></main>
+<footer>Assumptions: the gum leaves his mouth exactly horizontally from a height h = 1.8 m, and air resistance is ignored. Try g = 3.7 for Mars. The character is a fictional cricketer.</footer>
+<script>
+const $=id=>document.getElementById(id),cv=$('cv'),c=cv.getContext('2d');
+let step=0,play=false,last=0,P={h:1.8};
+const f2=v=>v.toFixed(2);
+const S=[
+['PANEL 1: PTOOEY!',()=>`Our batter spits the gum <b>exactly horizontally</b> at speed <b>u</b> from mouth height <b>h = 1.8 m</b>. After it leaves, only <b>gravity g</b> acts on it. Press <b>Spit!</b> and watch the dotted trail. Change u and g to see how the path changes.`],
+['PANEL 2: TWO INDEPENDENT MOTIONS',()=>`Gravity pulls only <b>down</b>, so the two motions don't disturb each other.<div class="f">Sideways: no force, speed stays u = ${f2(P.u)} m/s</div><div class="f">Downwards: starts at 0, v<sub>y</sub> = g t = ${f2(P.vy)} m/s</div>Drag t: the green arrow never changes, the red one keeps growing. The drop so far is <b>${f2(P.h-P.y)} m</b>.`],
+['PANEL 3: WHERE IS THE GUM AT TIME t?',()=>`<div class="f">x = u t</div><div class="f">drop = &frac12; g t&sup2;  &rArr;  y = h &minus; &frac12; g t&sup2;</div>At t = ${f2(P.t)} s: x = <b>${f2(P.x)} m</b>, drop = <b>${f2(P.h-P.y)} m</b>, height y = <b>${f2(P.y)} m</b>.`],
+['PANEL 4: KILL THE TIME!',()=>`From x = ut we get t = x/u. Put it into the drop:<div class="f">h &minus; y = g x&sup2; / 2u&sup2;</div><div class="f">x&sup2; = (2u&sup2;/g) (h &minus; y)</div>x&sup2; = constant &times; (h &minus; y) is the equation of a <b>parabola</b> whose vertex is the mouth. Gold dots show the gum every 0.1 s.`],
+['PANEL 5: FOCUS AND DIRECTRIX',()=>`Compare with the standard form x&sup2; = &minus;4a (y &minus; h):<div class="f">4a = 2u&sup2;/g &rArr; a = u&sup2;/2g = ${f2(P.a)}</div><div class="f">Vertex V = mouth (0, h)</div><div class="f">Focus F = (0, h &minus; a) = (0, ${f2(P.h-P.a)})</div><div class="f">Directrix: y = h + a = ${f2(P.D)}</div>The focus sits a below the vertex, the directrix a above it.`],
+['PANEL 6: ECCENTRICITY = 1',()=>`A parabola is the <b>locus</b> of P with PF = PD. Check for P = (x, y):<div class="f">PF&sup2; = x&sup2; + (y &minus; h + a)&sup2;</div><div class="f">put x&sup2; = 4a(h &minus; y): PF&sup2; = (h &minus; y + a)&sup2; = PD&sup2;</div>So <b>e = PF/PD = 1</b> everywhere. Drag t or press Spit! and watch the green and red lines stay equal.`]
+];
+function calc(){P.u=+$('u').value;P.g=+$('g').value;const h=P.h;P.T=Math.sqrt(2*h/P.g);P.R=P.u*P.T;P.a=P.u*P.u/(2*P.g);P.D=h+P.a;P.t=$('t').value/1000*P.T;P.x=P.u*P.t;P.y=h-.5*P.g*P.t*P.t;P.vy=P.g*P.t}
+function ui(){calc();$('uv').textContent=P.u.toFixed(1)+' m/s';$('gv').textContent=P.g.toFixed(1);$('tv').textContent=f2(P.t)+' s';
+$('ttl').textContent=S[step][0];$('text').innerHTML=S[step][1]();
+$('prev').disabled=step==0;$('next').disabled=step==S.length-1;
+[...$('dots').children].forEach((d,i)=>d.classList.toggle('on',i==step));
+$('ro').innerHTML=`<div>Fall time<b>${f2(P.T)} s</b></div><div>Range<b>${f2(P.R)} m</b></div><div>Height h<b>${P.h} m</b></div><div>Speed now<b>${f2(Math.hypot(P.u,P.vy))}</b></div>`;
+const pf=Math.hypot(P.x,P.y-P.h+P.a),pd=P.D-P.y;
+$('e').textContent=step>=4?`PF = ${f2(pf)}   PD = ${f2(pd)}   e = ${(pf/pd).toFixed(3)}`:'';
+draw()}
+function size(){const r=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;cv.width=w*r;cv.height=h*r;c.setTransform(r,0,0,r,0,0)}
+function line(a,b,x,y,col,w=3,dash){c.strokeStyle=col;c.lineWidth=w;c.setLineDash(dash||[]);c.beginPath();c.moveTo(a,b);c.lineTo(x,y);c.stroke();c.setLineDash([])}
+function txt(s,x,y,col,f='18px Patrick Hand,cursive'){c.fillStyle=col;c.font=f;c.fillText(s,x,y)}
+function arrow(x0,y0,x1,y1,col){line(x0,y0,x1,y1,col,4);const a=Math.atan2(y1-y0,x1-x0);c.fillStyle=col;c.beginPath();c.moveTo(x1,y1);c.lineTo(x1-12*Math.cos(a-.4),y1-12*Math.sin(a-.4));c.lineTo(x1-12*Math.cos(a+.4),y1-12*Math.sin(a+.4));c.fill()}
+function draw(){const W=cv.clientWidth,H=cv.clientHeight,cs=getComputedStyle(document.documentElement),ink=cs.getPropertyValue('--ink').trim(),blue=cs.getPropertyValue('--blue').trim(),grn=cs.getPropertyValue('--grn').trim(),red=cs.getPropertyValue('--red').trim();
+const h=P.h,ox=110,big=step>=4,ymax=big?P.D+.3:h+.5,ymin=big?Math.min(0,h-P.a)-.3:-.2;
+const s=Math.min(70,(W-ox-30)/(P.R+.6),(H-50)/(ymax-ymin)),X=x=>ox+x*s,Y=y=>25+(ymax-y)*s,oy=Y(h),gy=Y(0);
+c.clearRect(0,0,W,H);
+const dk=(matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light')||document.documentElement.dataset.theme==='dark',hz=gy-26;
+const sk=c.createLinearGradient(0,0,0,hz);sk.addColorStop(0,dk?'#141b45':'#7cc7f5');sk.addColorStop(1,dk?'#33468c':'#e4f5ff');c.fillStyle=sk;c.fillRect(0,0,W,Math.max(hz,0));
+c.fillStyle=dk?'#e8e6c0':'#ffe066';c.beginPath();c.arc(W-60,45,22,0,7);c.fill();
+c.fillStyle=dk?'#3a3f66':'#9aa3b5';c.fillRect(0,hz-34,W,36);
+for(let i=0;i<W;i+=9){c.fillStyle=['#e63946','#ffd23f','#fff','#2457d6','#ff9f1c'][(i/9|0)%5];c.globalAlpha=.6;c.beginPath();c.arc(i,hz-24+((i/9|0)%3)*8,4,0,7);c.fill()}c.globalAlpha=1;
+for(let i=0;i<W;i+=60){c.fillStyle=(i/60|0)%2?(dk?'#1f6b3a':'#4fb85c'):(dk?'#1a5c32':'#43a851');c.fillRect(i,hz,60,H-hz)}
+c.fillStyle=dk?'#8a7a52':'#d9c28b';c.fillRect(0,gy-8,W,20);c.fillStyle='#fff';c.fillRect(0,gy-8,W,2);
+c.fillStyle='#f3e6b0';c.strokeStyle='#1b1b2f';c.lineWidth=2;[6,13,20].forEach(px=>{c.fillRect(px,gy-.7*s,4,.7*s);c.strokeRect(px,gy-.7*s,4,.7*s)});
+txt('ground y = 0',W-110,gy+4,'#1b1b2f','15px Patrick Hand,cursive');
+// trail
+const n=60,pt=i=>{const t=P.T*i/n;return[X(P.u*t),Y(h-.5*P.g*t*t)]};
+if(step>=3){c.strokeStyle=blue;c.lineWidth=4;c.beginPath();for(let i=0;i<=n;i++){const[a,b]=pt(i);i?c.lineTo(a,b):c.moveTo(a,b)}c.stroke()}
+else{c.strokeStyle=blue;c.lineWidth=4;c.setLineDash([3,9]);c.lineCap='round';c.beginPath();for(let i=0;i<=n;i++){if(P.T*i/n>P.t)break;const[a,b]=pt(i);i?c.lineTo(a,b):c.moveTo(a,b)}c.lineTo(X(P.x),Y(P.y));c.stroke();c.setLineDash([]);c.lineCap='butt'}
+if(step==3)for(let t=0;t<=P.T+1e-6;t+=.1){c.fillStyle='#ffd23f';c.strokeStyle=ink;c.lineWidth=2;c.beginPath();c.arc(X(P.u*t),Y(h-.5*P.g*t*t),5,0,7);c.fill();c.stroke()}
+// geometry
+const gx=X(P.x),gyy=Y(P.y),fy=Y(h-P.a);
+if(big){line(0,Y(P.D),W,Y(P.D),red,3,[10,5]);txt('directrix  y = h + a',W-170,Y(P.D)-8,red);
+line(ox,Y(P.D),ox,Math.max(fy,gy)+10,ink,1.5,[4,4]);
+c.fillStyle=grn;c.beginPath();c.arc(ox,fy,7,0,7);c.fill();c.strokeStyle=ink;c.lineWidth=2;c.stroke();txt('F (focus)',ox+12,fy+6,grn,'bold 18px Patrick Hand,cursive');
+c.fillStyle=ink;c.beginPath();c.arc(ox,oy,5,0,7);c.fill();txt('V (vertex)',ox+14,oy-8,ink)}
+if(step>=5){line(gx,gyy,ox,fy,grn,4);line(gx,gyy,gx,Y(P.D),red,4);txt('PF',(gx+ox)/2+6,(gyy+fy)/2,grn,'bold 20px Patrick Hand,cursive');txt('PD',gx+8,(gyy+Y(P.D))/2,red,'bold 20px Patrick Hand,cursive')}
+if(step>=1&&step<=2){line(gx,oy,gx,gyy,ink,2,[5,5]);txt(step==1?'drop':'y',gx+8,(oy+gyy)/2,ink);if(step==2){line(gx,gyy,gx,gy,ink,2,[5,5]);line(ox,gy,gx,gy,ink,2,[5,5]);txt('x = '+f2(P.x),(ox+gx)/2,gy-6,ink)}}
+if(step==1){const kv=12;arrow(gx,gyy,gx+P.u*kv,gyy,grn);arrow(gx,gyy,gx,gyy+P.vy*kv,red);arrow(gx,gyy,gx+P.u*kv,gyy+P.vy*kv,blue);txt('u',gx+P.u*kv/2,gyy-8,grn);txt('vy',gx+8,gyy+P.vy*kv/2+14,red)}
+// h dimension
+if(step>=2){const dx=ox+58;line(dx,oy,dx,gy,ink,2);line(dx-5,oy,dx+5,oy,ink,2);line(dx-5,gy,dx+5,gy,ink,2);txt('h = 1.8 m',dx+8,(oy+gy)/2,ink,'bold 16px Patrick Hand,cursive')}
+// gum
+c.fillStyle='#ff5fa2';c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.arc(gx,gyy,9,0,7);c.fill();c.stroke();c.fillStyle='#fff8';c.beginPath();c.arc(gx-3,gyy-3,2.5,0,7);c.fill();
+// fictional batsman, mouth at local (0,0), feet at local y=106
+const k=s*h/106;c.save();c.translate(ox,oy);c.scale(k,k);c.lineWidth=3/k;c.strokeStyle='#1b1b2f';
+c.fillStyle='#fff';[-62,-26].forEach(px=>{c.beginPath();c.roundRect(px,66,26,40,6);c.fill();c.stroke();c.beginPath();c.moveTo(px+3,80);c.lineTo(px+23,80);c.moveTo(px+3,92);c.lineTo(px+23,92);c.stroke()});
+c.fillStyle='#2457d6';c.beginPath();c.roundRect(-70,22,76,50,10);c.fill();c.stroke();
+c.save();c.translate(16,52);c.rotate(.22);c.fillStyle='#d9b36c';c.beginPath();c.roundRect(-9,-4,18,58,5);c.fill();c.stroke();c.fillStyle='#1b1b2f';c.fillRect(-3,-32,6,28);c.fillStyle='#e63946';c.beginPath();c.arc(0,-14,9,0,7);c.fill();c.stroke();c.restore();
+c.fillStyle='#fff';c.fillRect(-70,40,76,8);
+c.fillStyle='#e0a070';c.beginPath();c.arc(-30,-12,34,0,7);c.fill();c.stroke();
+c.fillStyle='#1d3f9e';c.beginPath();c.arc(-30,-14,36,Math.PI,0);c.fill();c.stroke();c.fillRect(-2,-22,38,9);c.strokeRect(-2,-22,38,9);c.fillRect(-64,-16,14,38);c.strokeRect(-64,-16,14,38);
+c.fillStyle='#fff';c.beginPath();c.arc(-30,-38,6,0,7);c.fill();c.stroke();
+c.fillStyle='#1b1b2f';c.beginPath();c.arc(-14,-18,4,0,7);c.fill();c.beginPath();c.moveTo(-24,-28);c.lineTo(-6,-26);c.stroke();
+c.fillStyle='#7a1f2b';c.beginPath();c.ellipse(1,0,8,5,0,0,7);c.fill();c.stroke();
+c.restore();
+if(step==0&&$('t').value<80){c.fillStyle='#fff';c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.roundRect(ox+30,oy-100,96,40,12);c.fill();c.stroke();txt('PTOOEY!',ox+42,oy-73,'#1b1b2f','bold 22px Bangers,Impact,sans-serif')}}
+S.forEach((_,i)=>{const d=document.createElement('i');d.tabIndex=0;d.onclick=()=>{step=i;ui()};d.onkeydown=e=>{if(e.key=='Enter'){step=i;ui()}};$('dots').appendChild(d)});
+$('prev').onclick=()=>{step--;ui()};$('next').onclick=()=>{step++;ui()};
+['u','g','t'].forEach(i=>$(i).oninput=ui);
+$('play').onclick=()=>{if(play){play=false;$('play').innerHTML='&#9654; Spit!';return}if($('t').value>=1000)$('t').value=0;play=true;last=0;$('play').innerHTML='&#10074;&#10074; Pause';requestAnimationFrame(tick)};
+function tick(ts){if(!play)return;if(!last)last=ts;const dt=(ts-last)/1000;last=ts;calc();let v=+$('t').value+dt*0.3/P.T*1000;if(v>=1000){v=1000;play=false;$('play').innerHTML='&#9654; Spit!'}$('t').value=v;ui();if(play)requestAnimationFrame(tick)}
+addEventListener('resize',()=>{size();draw()});size();ui();
+</script></body></html>
