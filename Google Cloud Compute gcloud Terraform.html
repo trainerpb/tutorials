@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCP, gcloud CLI & Terraform Masterclass | Prof. Soham Sengupta</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: #dbeafe;
+    --border: #e2e8f0;
+    --code-bg: #0f172a;
+    --code-header: #1e293b;
+    --code-text: #e2e8f0;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --header-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --base-font-size: 16px;
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #090d16;
+    --bg-card: #111827;
+    --bg-subtle: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border: #1f2937;
+    --code-bg: #030712;
+    --code-header: #111827;
+    --code-text: #f1f5f9;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --header-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  }
+
+  /* Dynamic Accent Color Palettes */
+  [data-accent="blue"] { --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: rgba(37, 99, 235, 0.15); }
+  [data-accent="emerald"] { --accent: #10b981; --accent-hover: #059669; --accent-soft: rgba(16, 185, 129, 0.15); }
+  [data-accent="purple"] { --accent: #8b5cf6; --accent-hover: #7c3aed; --accent-soft: rgba(139, 92, 246, 0.15); }
+  [data-accent="rose"] { --accent: #f43f5e; --accent-hover: #e11d48; --accent-soft: rgba(244, 63, 94, 0.15); }
+  [data-accent="amber"] { --accent: #f59e0b; --accent-hover: #d97706; --accent-soft: rgba(245, 158, 11, 0.15); }
+
+  * { box-sizing: border-box; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+  html { font-size: var(--base-font-size); scroll-behavior: smooth; }
+  
+  body {
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.65;
+  }
+
+  /* Header & Controls */
+  header {
+    background: var(--header-gradient);
+    color: #ffffff;
+    padding: 18px 28px 12px 28px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1380px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .brand-title h1 {
+    font-size: 1.35rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand-title p {
+    margin: 3px 0 0 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn, .ctrl-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 6px 11px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ctrl-select option { background: #0f172a; color: #fff; }
+  .ctrl-btn:hover, .ctrl-select:hover { background: rgba(255, 255, 255, 0.22); border-color: var(--accent); }
+
+  .color-dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease;
+  }
+  .color-dot:hover { transform: scale(1.2); }
+  .color-dot.active { border-color: #ffffff; transform: scale(1.15); }
+
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex;
+    max-width: 1380px;
+    margin: 14px auto 0 auto;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-tab {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #cbd5e1;
+    padding: 9px 16px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .nav-tab:hover { color: #ffffff; background: rgba(255, 255, 255, 0.15); }
+  .nav-tab.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Main Container */
+  .container {
+    max-width: 1380px;
+    margin: 26px auto;
+    padding: 0 24px;
+  }
+
+  .tab-pane { display: none; animation: fadeIn 0.28s ease-out; }
+  .tab-pane.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Hero Banner */
+  .hero-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--accent);
+    padding: 18px 24px;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+
+  .hero-banner h2 { margin: 0; font-size: 1.25rem; }
+  .hero-banner p { margin: 4px 0 0 0; font-size: 0.88rem; color: var(--text-secondary); }
+
+  .badge-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  /* Cards & Grids */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .card h3 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.15rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin: 16px 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+
+  .info-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .info-box h4 { margin: 0 0 8px 0; font-size: 0.98rem; color: var(--text-primary); }
+  .info-box p, .info-box ul { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
+  .info-box ul { padding-left: 18px; }
+
+  /* Callout Boxes */
+  .callout {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+  }
+  .callout.warn { border-left-color: var(--warning); background: rgba(245, 158, 11, 0.12); }
+  .callout.danger { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+  .callout.success { border-left-color: var(--success); background: rgba(16, 185, 129, 0.12); }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--bg-card); }
+  th, td { border: 1px solid var(--border); padding: 12px 15px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-subtle); font-weight: 700; color: var(--text-primary); }
+  tr:nth-child(even) { background: rgba(148, 163, 184, 0.04); }
+
+  /* Copiable Code Editor Component */
+  .code-editor {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .code-header {
+    background: var(--code-header);
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+  }
+
+  .code-lang {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .window-dots { display: inline-flex; gap: 5px; }
+  .window-dots span { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-r { background: #ef4444; }
+  .dot-y { background: #f59e0b; }
+  .dot-g { background: #10b981; }
+
+  .copy-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .copy-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+  .code-editor pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--code-text);
+    line-height: 1.55;
+  }
+
+  code.inline {
+    background: var(--bg-subtle);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85em;
+    border: 1px solid var(--border);
+  }
+
+  /* Accordion FAQ */
+  .faq-toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .faq-search {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+
+  .action-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .action-btn.secondary {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .action-btn:hover { opacity: 0.92; }
+
+  .accordion-list { display: flex; flex-direction: column; gap: 10px; }
+  .accordion-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    overflow: hidden;
+  }
+
+  .accordion-btn {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: none;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.93rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: inherit;
+    gap: 12px;
+  }
+  .accordion-btn:hover { filter: brightness(0.97); }
+  .accordion-arrow { transition: transform 0.25s ease; font-size: 0.8rem; color: var(--accent); }
+  .accordion-item.active .accordion-arrow { transform: rotate(180deg); }
+
+  .accordion-panel {
+    display: none;
+    padding: 16px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+  }
+  .accordion-item.active .accordion-panel { display: block; }
+
+  .q-num {
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+
+  /* Quiz & Lab Styling */
+  .quiz-question {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .quiz-question h4 { margin: 0 0 12px 0; font-size: 0.96rem; }
+  .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.88rem;
+  }
+  .quiz-option:hover { border-color: var(--accent); }
+  .quiz-feedback {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    display: none;
+  }
+
+  .lab-step {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    background: var(--bg-card);
+  }
+  .lab-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .lab-check-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.88rem;
+  }
+  .progress-bar-wrap {
+    width: 100%;
+    height: 12px;
+    background: var(--bg-subtle);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 12px 0 20px 0;
+    border: 1px solid var(--border);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--success);
+    transition: width 0.3s ease;
+  }
+
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: #fff;
+    padding: 11px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 28px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 40px;
+    background: var(--bg-card);
+  }
+</style>
+</head>
+<body data-theme="light" data-accent="blue">
+
+<header>
+  <div class="header-top">
+    <div class="brand-title">
+      <h1>☁️ Google Cloud, gcloud CLI & Terraform Masterclass</h1>
+      <p>Cloud Native Architecture & Spring Boot Engineering Portal | Curated by Prof. Soham Sengupta</p>
+    </div>
+
+    <div class="controls-bar">
+      <!-- Accent Color Picker -->
+      <div class="color-dots" title="Select Theme Accent Color">
+        <span class="color-dot active" style="background:#2563eb;" onclick="setAccent('blue', this)"></span>
+        <span class="color-dot" style="background:#10b981;" onclick="setAccent('emerald', this)"></span>
+        <span class="color-dot" style="background:#8b5cf6;" onclick="setAccent('purple', this)"></span>
+        <span class="color-dot" style="background:#f43f5e;" onclick="setAccent('rose', this)"></span>
+        <span class="color-dot" style="background:#f59e0b;" onclick="setAccent('amber', this)"></span>
+      </div>
+
+      <!-- Font Family Selector -->
+      <select class="ctrl-select" onchange="changeFontFamily(this.value)" title="Change Font Family">
+        <option value="'Inter', sans-serif">Font: Inter</option>
+        <option value="'Poppins', sans-serif">Font: Poppins</option>
+        <option value="'Merriweather', serif">Font: Academic Serif</option>
+        <option value="'Fira Code', monospace">Font: Monospace</option>
+      </select>
+
+      <!-- Font Size Controls -->
+      <button class="ctrl-btn" onclick="changeFontSize(-1)" title="Decrease Font Size">A-</button>
+      <button class="ctrl-btn" onclick="changeFontSize(1)" title="Increase Font Size">A+</button>
+
+      <!-- Dark/Light Mode -->
+      <button class="ctrl-btn" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> <span id="themeText">Dark</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button class="ctrl-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+        ⛶ Fullscreen
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="openTab(event, 'tab-foundations')">1. GCP Free Tier & Foundations</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-vm-storage')">2. Compute VMs & Storage Buckets</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-gcloud-cli')">3. Cloud Shell & gcloud CLI</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-terraform')">4. Terraform (IaC) Masterclass</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-faq')">5. Exhaustive FAQ (28 Q&A)</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-quiz-lab')">6. Interactive Quiz & Hands-On Lab</button>
+  </nav>
+</header>
+
+<main class="container">
+
+  <!-- ==================== TAB 1: GCP FREE TIER & FOUNDATIONS ==================== -->
+  <section id="tab-foundations" class="tab-pane active">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 1: Google Cloud Foundations & The "Always Free" Architecture</h2>
+        <p>Understanding OpEx Billing, Service Boundaries, and Zero-Cost Guardrails for Spring Boot Architects</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">CapEx vs OpEx</span>
+        <span class="badge">IaaS vs PaaS</span>
+        <span class="badge">Billing Guardrails</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. The Cloud Economic Shift & Deployment Models</h3>
+      <p>Cloud computing shifts IT infrastructure from upfront <strong>Capital Expenditure (CapEx)</strong> (buying physical servers) to <strong>Operational Expenditure (OpEx)</strong> (pay-as-you-go metered billing). As a Java Spring Boot architect, you primarily select between two core NIST service models on GCP:</p>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🖥️ Infrastructure as a Service (IaaS) — Compute Engine</h4>
+          <p>Provides virtualized hardware slices (VMs, persistent disks, VPC networks). Google manages the physical data center and KVM hypervisor; you manage the Linux OS, JDK installation, firewall ports, and Spring Boot JAR execution.</p>
+        </div>
+        <div class="info-box">
+          <h4>🚀 Platform as a Service (PaaS) — Cloud Run / App Engine</h4>
+          <p>Provides a managed execution environment for containerized applications (OCI images built via Jib or Docker). It scales to zero when idle and abstracts away all OS patching and server maintenance.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. The 2026 Google Cloud "Always Free" Resource Boundaries</h3>
+      <p>Google Cloud offers two parallel incentives: a <strong>90-Day / $300 Free Trial</strong> and an ongoing <strong>Always Free Tier</strong>. Staying strictly within the boundaries below ensures a $0.00 monthly invoice indefinitely:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>GCP Service</th>
+              <th>Always Free Allocation</th>
+              <th>Critical Configuration Rules</th>
+              <th>Spring Boot Architecture Use Case</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Compute Engine (IaaS)</strong></td>
+              <td>1 non-preemptible <code class="inline">e2-micro</code> instance per month</td>
+              <td>Must be in <code class="inline">us-central1</code> (Iowa), <code class="inline">us-east1</code> (S. Carolina), or <code class="inline">us-west1</code> (Oregon).</td>
+              <td>Hosting an always-on monolithic Spring Boot JAR, Nginx reverse proxy, or lightweight service.</td>
+            </tr>
+            <tr>
+              <td><strong>Persistent Disk</strong></td>
+              <td>30 GB-months of <strong>Standard Persistent Disk</strong></td>
+              <td>Must select <code class="inline">pd-standard</code> (HDD). Default <code class="inline">pd-balanced</code> (SSD) costs ~$1.00/10GB!</td>
+              <td>Boot disk for your Linux OS, JVM binaries, and application log files.</td>
+            </tr>
+            <tr>
+              <td><strong>Cloud Run (PaaS)</strong></td>
+              <td>2 million requests, 360,000 GB-sec memory, 180,000 vCPU-sec</td>
+              <td>Set max instances to 1–2 and allocate CPU only during request processing.</td>
+              <td>Stateless Spring Boot microservices packaged via Google Jib or Docker.</td>
+            </tr>
+            <tr>
+              <td><strong>Cloud Storage (GCS)</strong></td>
+              <td>5 GB-months of Standard Storage + 5,000 Class A Ops</td>
+              <td>Must be provisioned in US regions (<code class="inline">us-central1</code>, <code class="inline">us-east1</code>, <code class="inline">us-west1</code>).</td>
+              <td>Storing static web assets, user file uploads, and compiled <code class="inline">.jar</code> artifacts.</td>
+            </tr>
+            <tr>
+              <td><strong>Artifact Registry</strong></td>
+              <td>0.5 GB storage per month</td>
+              <td>Periodically prune old container tags to remain under 500 MB.</td>
+              <td>Hosting private Docker/OCI container images for Spring Boot deployments.</td>
+            </tr>
+            <tr>
+              <td><strong>Firestore (NoSQL)</strong></td>
+              <td>1 GB storage, 50k reads, 20k writes/day</td>
+              <td>Native mode database; zero maintenance required.</td>
+              <td>Storing user sessions, application state, and document-oriented entities.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>Why does the Console UI show a "$7.11/month" estimate for an e2-micro VM?</strong><br>
+        1. <strong>The $6.11 Compute Estimate:</strong> The GCP Console UI always displays the raw retail price of the <code class="inline">e2-micro</code> VM ($6.11). It does not dynamically subtract the Always Free discount on the creation form. Instead, Google automatically applies a 100% credit at the end of the billing cycle if the VM is in an eligible US region.<br>
+        2. <strong>The $1.00 Disk Estimate:</strong> By default, GCP selects a 10 GB <em>Balanced Persistent Disk (SSD)</em>, which is not free. Changing the Boot Disk type to <strong>Standard Persistent Disk (HDD)</strong> (up to 30 GB) eliminates this $1.00 charge completely.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Billing Safety Guardrails & Account Protection</h3>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🛡️ Will My Credit Card Be Auto-Charged?</h4>
+          <p><strong>No.</strong> While on the Free Trial, Google Cloud will never automatically bill your credit card if your $300 credit expires or the 90 days end. Your instances will simply pause until you manually click <em>"Upgrade to a Paid Account"</em>.</p>
+        </div>
+        <div class="info-box">
+          <h4>🔔 Setting a $0.00 Budget Alert</h4>
+          <p>Always navigate to <strong>Billing &rarr; Budgets & alerts</strong> immediately upon creating an account. Set a target budget of <strong>$0.00</strong> (or $1.00) with email alerts at 50%, 90%, and 100% thresholds to catch accidental paid resources early.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 2: COMPUTE VMs & STORAGE BUCKETS ==================== -->
+  <section id="tab-vm-storage" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 2: Google Compute Engine (VMs) & Cloud Storage Buckets</h2>
+        <p>Provisioning Linux Virtual Machines, Configuring VPC Firewalls, Serving Apps, and Managing Object Storage</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Compute Engine</span>
+        <span class="badge">VPC Firewall Rules</span>
+        <span class="badge">Cloud Storage (GCS)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Anatomy of a Compute Engine Virtual Machine</h3>
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>⚙️ Machine Type (<code class="inline">e2-micro</code>)</h4>
+          <p>Provides 2 shared vCPUs and 1 GB of RAM. Ideal for lightweight Spring Boot APIs, Nginx servers, and learning Linux administration.</p>
+        </div>
+        <div class="info-box">
+          <h4>🌐 Internal vs External IPs</h4>
+          <p><strong>Internal IP:</strong> Private RFC 1918 address for VPC-internal communication.<br><strong>External IP:</strong> Public internet routable address to access your web apps from a browser.</p>
+        </div>
+        <div class="info-box">
+          <h4>🛑 VM Lifecycle Billing</h4>
+          <p><strong>Stopped (Terminated):</strong> $0 compute charges, but attached disks and static IPs still bill.<br><strong>Deleted:</strong> Destroys both VM and boot disk, halting 100% of billing.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Running Web Applications on Your VM (Python, Nginx & Java)</h3>
+      <p>After clicking the <strong>SSH</strong> button in the GCP Console to launch the browser-based Linux terminal, you can immediately serve web traffic on Port 80 (or custom ports like 8080):</p>
+
+      <h4>Option A: Instant Python 3 HTTP Server (Port 80)</h4>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> BASH — VM SSH TERMINAL</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Create a simple HTML test payload
+echo "&lt;h1&gt;Hello from my Google Cloud VM!&lt;/h1&gt;&lt;p&gt;App is live.&lt;/p&gt;" &gt; index.html
+
+# 2. Bind Python's built-in server to privileged Port 80 (Press Ctrl+C to stop)
+sudo python3 -m http.server 80</code></pre>
+      </div>
+
+      <h4>Option B: No-Python Alternatives (Nginx, Java 18+ jwebserver, BusyBox)</h4>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> BASH — JAVA & LINUX NATIVE SERVERS</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># Alternative 1: Install & Serve via Nginx (Production Daemon)
+sudo apt update && sudo apt install -y nginx
+sudo mv index.html /var/www/html/index.html
+
+# Alternative 2: Use Java's Built-in Simple Web Server (JDK 18+)
+sudo apt install -y default-jdk
+sudo jwebserver -p 80 -b 0.0.0.0
+
+# Alternative 3: Linux Native BusyBox HTTPD
+sudo busybox httpd -f -p 80</code></pre>
+      </div>
+
+      <h4>Option C: Deploying a Spring Boot Executable JAR in the Background</h4>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> BASH — SPRING BOOT BACKGROUND EXECUTION</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># Run Spring Boot JAR detached from terminal using nohup so it survives SSH exit
+nohup java -jar my-spring-app-0.0.1-SNAPSHOT.jar &gt; app.log 2&gt;&amp;1 &amp;
+
+# Stream live Tomcat startup logs
+tail -f app.log</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Opening Custom Ports via VPC Firewall Rules (e.g., Port 8080)</h3>
+      <p>By default, GCP blocks all incoming (Ingress) traffic from the public internet unless explicitly permitted. Checking <em>"Allow HTTP traffic"</em> only opens Port 80. For Spring Boot (Port 8080), you must add a VPC Firewall Rule:</p>
+      <ol>
+        <li>In the GCP Console search bar, navigate to <strong>VPC network &rarr; Firewall</strong> and click <strong>Create Firewall Rule</strong>.</li>
+        <li><strong>Name:</strong> <code class="inline">allow-spring-8080</code> | <strong>Direction:</strong> <code class="inline">Ingress</code> | <strong>Action on match:</strong> <code class="inline">Allow</code>.</li>
+        <li><strong>Targets:</strong> Choose <em>All instances in the network</em> (or use <em>Specified target tags</em> like <code class="inline">spring-app</code>).</li>
+        <li><strong>Source IPv4 ranges:</strong> <code class="inline">0.0.0.0/0</code> (allows public access from any IP address).</li>
+        <li><strong>Protocols and ports:</strong> Check <strong>TCP</strong> and enter <code class="inline">8080</code>. Click <strong>Create</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3>4. Google Cloud Storage (GCS) Buckets</h3>
+      <p>Cloud Storage is a globally accessible, flat-namespace <strong>Object Storage</strong> system (analogous to AWS S3). Unlike a persistent boot disk (Block Storage), you store discrete immutable files (objects) inside globally unique buckets:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Storage Class</th>
+              <th>Target Access Frequency</th>
+              <th>Typical Enterprise Use Case</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Standard</strong></td>
+              <td>Hot data accessed frequently</td>
+              <td>Active website assets, application uploads, compiled Spring Boot JAR staging.</td>
+            </tr>
+            <tr>
+              <td><strong>Nearline</strong></td>
+              <td>&lt; Once every 30 days</td>
+              <td>Monthly application backups and user-generated archive media.</td>
+            </tr>
+            <tr>
+              <td><strong>Coldline</strong></td>
+              <td>&lt; Once every 90 days</td>
+              <td>Quarterly disaster recovery snapshots and rarely read telemetry logs.</td>
+            </tr>
+            <tr>
+              <td><strong>Archive</strong></td>
+              <td>&lt; Once every 365 days</td>
+              <td>Long-term regulatory compliance, banking audits, and medical record retention.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 3: CLOUD SHELL & GCLOUD CLI ==================== -->
+  <section id="tab-gcloud-cli" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 3: Google Cloud Shell & Local <code class="inline">gcloud</code> CLI Reference</h2>
+        <p>From Browser Ephemeral Terminals to Local Windows SDK Setup, Context Switching, and Advanced Output Formatting</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Windows SDK Setup</span>
+        <span class="badge">gcloud compute</span>
+        <span class="badge">--format & --filter</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Web Cloud Shell vs. Local <code class="inline">gcloud</code> CLI Installation</h3>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🌐 Google Cloud Shell (Web Browser)</h4>
+          <ul>
+            <li>Free, ephemeral Debian Linux VM launched from the top-right <code class="inline">&gt;_</code> icon in the GCP Console.</li>
+            <li>Pre-installed with <code class="inline">gcloud</code>, Java, Docker, and Terraform; pre-authenticated to your account.</li>
+            <li><strong>Limitation:</strong> Times out after inactivity; cannot directly access files on your local laptop without manual upload.</li>
+          </ul>
+        </div>
+        <div class="info-box">
+          <h4>💻 Local <code class="inline">gcloud</code> CLI (Industry Standard)</h4>
+          <ul>
+            <li>Installed directly on your Windows/Mac/Linux workstation (just like the AWS CLI).</li>
+            <li>Essential for local IDE integration (IntelliJ IDEA, VS Code), local Maven/Gradle builds, and pushing artifacts directly from your hard drive.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4>Step-by-Step Local Windows Setup & Configuration Switching</h4>
+      <p>After running <code class="inline">GoogleCloudSDKInstaller.exe</code> (with Bundled Python enabled) and executing <code class="inline">gcloud init</code>, use these commands to inspect and switch accounts, projects, and default zones:</p>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> CMD / BASH — CONFIGURATION & CONTEXT SWITCHING</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. View active account, project, and compute region/zone
+gcloud config list
+
+# 2. Set default zone so you don't have to pass --zone on every command!
+# (Prevents global datacenter scan delays when stopping/starting VMs)
+gcloud config set compute/region us-central1
+gcloud config set compute/zone us-central1-a
+
+# 3. List all available projects and switch active project
+gcloud projects list
+gcloud config set project ivory-link-511508-u3
+
+# 4. View authenticated accounts and switch active account
+gcloud auth list
+gcloud config set account sohamsironline@gmail.com
+gcloud auth login   # Add a brand new Google account</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Essential <code class="inline">gcloud compute</code> & <code class="inline">gcloud storage</code> Commands</h3>
+      <div class="callout danger">
+        <strong>Common Syntax Pitfall:</strong> Always use the plural noun <code class="inline">instances</code>! Running <code class="inline">gcloud compute instance list</code> throws <code class="inline">ERROR: (gcloud.compute) Invalid choice: 'instance'</code>.
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> BASH — VM LIFECYCLE, SSH, SCP & FIREWALL OPERATIONS</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># --- 1. CREATE A FREE-TIER VM VIA CLI ---
+gcloud compute instances create my-first-vm \
+    --zone=us-central1-a \
+    --machine-type=e2-micro \
+    --boot-disk-type=pd-standard \
+    --boot-disk-size=30GB \
+    --image-family=debian-12 \
+    --image-project=debian-cloud \
+    --tags=http-server,spring-app
+
+# --- 2. LIST, DESCRIBE, START, STOP & DELETE ---
+gcloud compute instances list
+gcloud compute instances describe instance-20261019-063356 --zone=us-central1-a
+
+# Stop VM gracefully (Add --async to return terminal prompt immediately without waiting 90s for OS ACPI shutdown!)
+gcloud compute instances stop instance-20261019-063356 --async
+gcloud compute instances start instance-20261019-063356
+gcloud compute instances delete instance-20261019-063356 --quiet
+
+# --- 3. SSH & SECURE FILE TRANSFER (SCP) ---
+gcloud compute ssh instance-20261019-063356 --zone=us-central1-a
+gcloud compute ssh instance-20261019-063356 --command="java -version &amp;&amp; uptime"
+gcloud compute scp target/spring-app.jar instance-20261019-063356:~/ --zone=us-central1-a
+
+# --- 4. CLOUD STORAGE BUCKET CLI ---
+gcloud storage ls
+gcloud storage buckets create gs://soham-cloud-demo-2026 --location=us-central1
+gcloud storage cp target/spring-app.jar gs://soham-cloud-demo-2026/</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Advanced Output Formatting (<code class="inline">--format</code> & <code class="inline">--filter</code>)</h3>
+      <p>Instead of parsing text with <code class="inline">awk</code> or <code class="inline">grep</code>, <code class="inline">gcloud</code> provides built-in projection and filtering flags ideal for automation scripts:</p>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> BASH — CUSTOM TABLES, JSON, YAML & VALUE EXTRACTION</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Extract ONLY the raw External IP of a VM (for scripts)
+gcloud compute instances describe instance-20261019-063356 \
+    --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+
+# 2. Render a custom clean table showing Name, Machine Type, and Status
+gcloud compute instances list \
+    --format="table(name, machineType.basename(), status, networkInterfaces[0].accessConfigs[0].natIP:label=EXTERNAL_IP)"
+
+# 3. Filter only RUNNING or TERMINATED instances
+gcloud compute instances list --filter="status=RUNNING"
+gcloud compute instances list --filter="status:TERMINATED"
+
+# 4. Export full VM metadata as JSON or YAML
+gcloud compute instances describe instance-20261019-063356 --format=json</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 4: TERRAFORM (IaC) MASTERCLASS ==================== -->
+  <section id="tab-terraform" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 4: Infrastructure as Code (IaC) with HashiCorp Terraform</h2>
+        <p>Cloud Composability, Declarative Provisioning, ADC Authentication, State Files, and Plan Blueprints</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">HCL & CDKTF</span>
+        <span class="badge">ADC Auth Bridge</span>
+        <span class="badge">terraform.tfstate</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Why Terraform? Imperative CLI vs. Declarative IaC</h3>
+      <p>In cloud architecture, <strong>Composability</strong> is the practice of treating compute, storage, and networking as modular building blocks assembled on demand. While <code class="inline">gcloud</code> CLI is <strong>Imperative</strong> (you specify exact step-by-step commands), Terraform is <strong>Declarative</strong> (you declare the desired target architecture in <code class="inline">.tf</code> files, and Terraform calculates the necessary API calls).</p>
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>🔌 Multi-Cloud Provider Resolution</h4>
+          <p>Even if you have <code class="inline">gcloud</code>, <code class="inline">aws</code>, and <code class="inline">az</code> CLIs installed on the same machine, Terraform knows which cloud to use based on the <code class="inline">provider "google"</code> block in your code.</p>
+        </div>
+        <div class="info-box">
+          <h4>🔑 The ADC Authentication Bridge</h4>
+          <p>Terraform does not read standard interactive <code class="inline">gcloud auth login</code> sessions. You must run <code class="inline">gcloud auth application-default login</code> once so Terraform can load the local ADC JSON token.</p>
+        </div>
+        <div class="info-box">
+          <h4>☕ Do Java Architects Memorize HCL?</h4>
+          <p>No! You can use <strong>CDK for Terraform (CDKTF)</strong> to write infrastructure in pure Java, use <code class="inline">terraform plan -generate-config-out</code>, or use IntelliJ HCL autocomplete.</p>
+        </div>
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> CMD — STEP 1: GENERATE APPLICATION DEFAULT CREDENTIALS (ADC)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># Run this in Windows Command Prompt to fix "Error: Attempted to load application default credentials..."
+# Saves token to: C:\Users\&lt;User&gt;\AppData\Roaming\gcloud\application_default_credentials.json
+gcloud auth application-default login</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Complete Free-Tier GCP Configuration (<code class="inline">main.tf</code>)</h3>
+      <p>Terraform automatically merges all <code class="inline">.tf</code> files in your working folder. While you can name a file <code class="inline">my-first-tf-vm.tf</code>, standard enterprise conventions separate code into <code class="inline">main.tf</code>, <code class="inline">variables.tf</code>, <code class="inline">outputs.tf</code>, and <code class="inline">providers.tf</code>. <em>(Note: On Windows, verify Notepad didn't save your file as <code class="inline">main.tf.txt</code>, or Terraform will say "No changes"!)</em></p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang"><span class="window-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></span> HCL — main.tf (VM + FIREWALL + CLOUD STORAGE BUCKET)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Configure the Google Cloud Provider
+provider "google" {
+  project = "ivory-link-511508-u3"
+  region  = "us-central1"
+  zone    = "us-central1-a"
+}
+
+# 2. Provision Always-Free e2-micro VM with 30GB Standard Disk
+resource "google_compute_instance" "tf_vm" {
+  name         = "my-first-tf-vm"
+  machine_type = "e2-micro"
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-12"
+      type  = "pd-standard"
+      size  = 30
+    }
+  }
+
+  network_interface {
+    network = "default"
+    access_config {} # Assigns ephemeral Public External IP
+  }
+
+  tags = ["spring-app", "http-server"]
+}
+
+# 3. Provision VPC Firewall Rule for Spring Boot (8080) &amp; HTTP (80)
+resource "google_compute_firewall" "allow_spring_8080" {
+  name    = "allow-spring-8080-tf"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "8080"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["spring-app"]
+}
+
+# 4. Provision a Standard Regional Cloud Storage Bucket
+resource "google_storage_bucket" "app_bucket" {
+  name          = "ivory-link-spring-artifacts-2026"
+  location      = "US-CENTRAL1"
+  storage_class = "STANDARD"
+  uniform_bucket_level_access = true
+}
+
+# 5. Output the VM's Public IP Address after deployment
+output "vm_external_ip" {
+  value = google_compute_instance.tf_vm.network_interface[0].access_config[0].nat_ip
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. The 4-Phase Terraform Lifecycle & Saved Plans (<code class="inline">-out=tfplan</code>)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Phase / Command</th>
+              <th>What It Executes Under the Hood</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="inline">terraform init</code></td>
+              <td>Scans <code class="inline">.tf</code> files, identifies the <code class="inline">google</code> provider, and downloads the official GCP plugin binaries into <code class="inline">.terraform/</code>.</td>
+            </tr>
+            <tr>
+              <td><code class="inline">terraform plan</code></td>
+              <td>Compares desired <code class="inline">.tf</code> code against <code class="inline">terraform.tfstate</code> and live GCP APIs. Outputs a speculative preview diff without modifying resources.</td>
+            </tr>
+            <tr>
+              <td><code class="inline">terraform plan -out=tfplan</code></td>
+              <td>Saves a <strong>frozen binary execution blueprint</strong> to disk. Guarantees <code class="inline">terraform apply tfplan</code> executes <em>exact</em> reviewed actions without re-calculating or prompting <code class="inline">yes</code>. (Warning: contains cleartext state variables—never commit <code class="inline">tfplan</code> to Git!).</td>
+            </tr>
+            <tr>
+              <td><code class="inline">terraform apply</code></td>
+              <td>Executes API calls against Google Cloud to create, update, or replace infrastructure and updates <code class="inline">terraform.tfstate</code>.</td>
+            </tr>
+            <tr>
+              <td><code class="inline">terraform destroy</code></td>
+              <td>Reads the state file and cleanly tears down every managed resource in reverse dependency order to guarantee $0 billing.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4. Inside <code class="inline">terraform.tfstate</code> & Understanding Plan Diffs</h3>
+      <p>When Terraform provisions your VM, it records the real-world GCP resource ID, lineage, and attributes inside <code class="inline">terraform.tfstate</code>. During subsequent runs, Terraform compares your code to this file and uses four diff symbols:</p>
+      <ul>
+        <li><code class="inline">+</code> <strong>(Create):</strong> Resource exists in code but not in state; will be newly created.</li>
+        <li><code class="inline">~</code> <strong>(Update in-place):</strong> Attribute changed (e.g., adding network tags) and can be modified live without rebooting.</li>
+        <li><code class="inline">-</code> <strong>(Destroy):</strong> Resource was removed from code and will be deleted from GCP.</li>
+        <li><code class="inline">-/+</code> <strong>(Destroy and Recreate):</strong> Immutable property changed (e.g., changing VM <code class="inline">name</code> or boot disk OS image), forcing replacement.</li>
+      </ul>
+
+      <div class="grid-2">
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">JSON — terraform.tfstate SNIPPET</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>{
+  "version": 4,
+  "terraform_version": "1.9.0",
+  "serial": 3,
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "google_compute_instance",
+      "name": "tf_vm",
+      "instances": [
+        {
+          "attributes": {
+            "id": "projects/ivory-link-511508-u3/zones/us-central1-a/instances/my-first-tf-vm",
+            "machine_type": "e2-micro",
+            "status": "RUNNING",
+            "tags": ["http-server", "spring-app"]
+          }
+        }
+      ]
+    }
+  ]
+}</code></pre>
+        </div>
+
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">DIFF — IN-PLACE UPDATE (~) PREVIEW</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>Terraform will perform the following actions:
+
+  # google_compute_instance.tf_vm will be updated in-place
+  ~ resource "google_compute_instance" "tf_vm" {
+        id   = "projects/ivory-link-511508-u3/zones/us-central1-a/instances/my-first-tf-vm"
+        name = "my-first-tf-vm"
+      ~ tags = [
+          + "http-server",
+          + "spring-app",
+        ]
+        # (17 unchanged attributes hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 5: EXHAUSTIVE FAQ (28 ACCORDIONS) ==================== -->
+  <section id="tab-faq" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 5: Exhaustive Technical FAQ (28 Questions & Answers)</h2>
+        <p>All answers are hidden by default for active recall. Click any question to expand its architectural explanation.</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">28 Curated Q&As</span>
+        <span class="badge">Hidden by Default</span>
+        <span class="badge">Instant Search</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="faq-toolbar">
+        <input type="text" id="faqSearch" class="faq-search" placeholder="🔍 Search across all 28 questions (e.g., 'pd-standard', 'ADC', 'tfstate', '8080', 'async')..." oninput="filterFAQ()">
+        <button class="action-btn" onclick="toggleAllFAQ(true)">Expand All</button>
+        <button class="action-btn secondary" onclick="toggleAllFAQ(false)">Collapse All</button>
+      </div>
+
+      <div id="faqContainer" class="accordion-list"></div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 6: INTERACTIVE QUIZ & HANDS-ON LAB ==================== -->
+  <section id="tab-quiz-lab" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 6: Knowledge Assessment Quiz & Guided Hands-On Capstone Lab</h2>
+        <p>Validate your mastery of GCP Compute Engine, <code class="inline">gcloud</code> CLI, and Terraform Infrastructure as Code</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">10 Auto-Graded MCQs</span>
+        <span class="badge">6-Step Practical Lab</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Part A: Interactive 10-Question Architecture Quiz</h3>
+      <div id="quizContainer"></div>
+      <div style="display:flex; gap:12px; align-items:center; margin-top:16px;">
+        <button class="action-btn" onclick="gradeQuiz()">✅ Submit & Grade Quiz</button>
+        <button class="action-btn secondary" onclick="resetQuiz()">🔄 Reset Quiz</button>
+        <span id="quizScoreDisplay" style="font-weight:700; font-size:1.05rem; color:var(--accent);"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Part B: End-to-End Hands-On Capstone Lab</h3>
+      <p>Complete each practical milestone on your local Windows machine and check off the boxes below to track your lab progress:</p>
+      
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700;">
+          <span>Lab Completion Progress</span>
+          <span id="labProgressText">0 / 6 Completed (0%)</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div id="labProgressBar" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 1: Configure Local <code class="inline">gcloud</code> Context & ADC Token</h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">Bind your Windows SDK to your project, set the default compute zone so commands execute rapidly, and create your Application Default Credentials token for Terraform.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">CMD — TASK 1</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>gcloud config set project ivory-link-511508-u3
+gcloud config set compute/region us-central1
+gcloud config set compute/zone us-central1-a
+gcloud auth application-default login</code></pre>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 2: Author Declarative Terraform Infrastructure (<code class="inline">main.tf</code>)</h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">Create a clean directory, write a <code class="inline">main.tf</code> file provisioning an <code class="inline">e2-micro</code> VM with a 30GB <code class="inline">pd-standard</code> disk and a TCP:8080 firewall rule, and ensure it has a strict <code class="inline">.tf</code> extension.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">CMD — TASK 2</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>mkdir C:\gcp-spring-lab &amp;&amp; cd C:\gcp-spring-lab
+notepad main.tf
+dir   # Verify file is named main.tf and NOT main.tf.txt!</code></pre>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 3: Initialize, Save Frozen Plan Blueprint & Apply</h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">Download the Google provider plugin, save a deterministic execution plan using <code class="inline">-out=tfplan</code>, and apply it.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">CMD — TASK 3</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>terraform init
+terraform plan -out=tfplan
+terraform apply tfplan</code></pre>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 4: Verify VM & Extract External IP via <code class="inline">gcloud</code> Formatting</h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">Query the newly created VM using custom <code class="inline">gcloud</code> formatting flags to verify its status and public IP.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">CMD — TASK 4</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>gcloud compute instances list --format="table(name, zone, status, networkInterfaces[0].accessConfigs[0].natIP:label=EXTERNAL_IP)"</code></pre>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 5: SSH Into VM & Launch a Web Service on Port 8080</h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">SSH into your Terraform-provisioned VM and start a web listener on port 8080, then test <code class="inline">http://&lt;EXTERNAL_IP&gt;:8080</code> in your browser.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">BASH — TASK 5</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>gcloud compute ssh my-first-tf-vm
+echo "&lt;h1&gt;Spring Boot Ready Lab VM on Port 8080&lt;/h1&gt;" &gt; index.html
+python3 -m http.server 8080</code></pre>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step-header">
+          <h4 style="margin:0;">Task 6: Clean Up Infrastructure with <code class="inline">terraform destroy</code></h4>
+          <label class="lab-check-label"><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Mark Completed</label>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin:8px 0;">Exit the SSH session (<code class="inline">exit</code>) and instruct Terraform to tear down all provisioned resources so zero compute or disk artifacts remain.</p>
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">CMD — TASK 6</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>terraform destroy</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<a href="mailto:sohamsironline@gmail.com?subject=GCP%20%26%20Terraform%20Masterclass%20Query" class="fab">
+  ✉️ Ask Soham Sir
+</a>
+
+<footer>
+  Google Cloud Platform, <code class="inline">gcloud</code> CLI &amp; Terraform Study Portal &bull; Curated by <strong>Prof. Soham Sengupta</strong>
+</footer>
+
+<script>
+  // ==================== UI CUSTOMIZATION & NAVIGATION ====================
+  function openTab(evt, tabId) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const next = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    body.setAttribute('data-theme', next);
+    document.getElementById('themeIcon').textContent = next === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeText').textContent = next === 'dark' ? 'Light' : 'Dark';
+  }
+
+  function setAccent(color, el) {
+    document.body.setAttribute('data-accent', color);
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  let currentFontSize = 16;
+  function changeFontSize(delta) {
+    currentFontSize = Math.min(22, Math.max(13, currentFontSize + delta));
+    document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+  }
+
+  function changeFontFamily(fontVal) {
+    document.documentElement.style.setProperty('--font-main', fontVal);
+  }
+
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => alert("Fullscreen error: " + err.message));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function copyCode(btn) {
+    const codeText = btn.closest('.code-editor').querySelector('pre').innerText;
+    navigator.clipboard.writeText(codeText).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  // ==================== 28 FAQ ACCORDION DATA & RENDERER ====================
+  const faqData = [
+    { q: "What is the difference between the Google Cloud $300 Free Trial and the Always Free Tier?", a: "The Free Trial provides $300 in billing credits valid for 90 days across almost any GCP service. The Always Free Tier continues indefinitely even after the 90 days end, providing strict monthly quotas (such as 1 e2-micro VM, 30 GB Standard Persistent Disk, and 5 GB Cloud Storage in eligible US regions) at $0 cost." },
+    { q: "Why does the GCP Console show a $7.11 monthly estimate when I select an e2-micro VM?", a: "Two reasons: First, the Console UI always displays the raw retail compute price ($6.11) and applies the Always Free promotional credit on the backend invoice. Second, the default template selects a 10 GB Balanced Persistent Disk (SSD) which costs $1.00/month. Changing the disk type to Standard Persistent Disk (pd-standard) removes the $1.00 charge." },
+    { q: "Which GCP regions qualify for the Always Free e2-micro VM?", a: "You must provision your non-preemptible e2-micro instance in one of three US regions: us-central1 (Iowa), us-east1 (South Carolina), or us-west1 (Oregon)." },
+    { q: "Will my credit card be automatically charged if I exceed free limits during the Free Trial?", a: "No. Google Cloud will never automatically charge your card while your account is in Free Trial status. If you exhaust your $300 credit, resources are safely suspended unless you manually click 'Upgrade to a paid account'." },
+    { q: "What is the billing difference between Stopping a VM and Deleting a VM?", a: "Stopping (shutting down) a VM halts vCPU and RAM compute billing, but you continue to be billed for attached Persistent Disks and static external IP addresses. Deleting a VM destroys both the compute instance and (by default) its boot disk, stopping all charges." },
+    { q: "How does SSH-in-Browser work without requiring local SSH keys?", a: "When you click the SSH button in the GCP Console, Google automatically generates temporary (ephemeral) SSH key pairs, pushes the public key to your VM's metadata, and opens a secure WebSocket terminal session directly in your browser." },
+    { q: "Why did 'Allow HTTP traffic' let me access port 80, but blocked my Spring Boot app on port 8080?", a: "The built-in 'Allow HTTP traffic' checkbox creates a firewall rule (default-allow-http) that exclusively opens TCP port 80. Spring Boot's embedded Tomcat listens on TCP port 8080 by default, requiring a custom VPC Ingress firewall rule allowing tcp:8080." },
+    { q: "How can I serve a quick web page on a GCP Linux VM without using Python?", a: "You can install Nginx ('sudo apt install -y nginx' and place index.html in /var/www/html/), use Java 18+'s built-in simple web server ('sudo jwebserver -p 80 -b 0.0.0.0'), or use Linux's native BusyBox utility ('sudo busybox httpd -f -p 80')." },
+    { q: "How do I keep my Spring Boot JAR running after I close my SSH terminal?", a: "Run the Java command prefixed with 'nohup' and suffixed with '&' to detach it from the shell session: 'nohup java -jar app.jar > app.log 2>&1 &'." },
+    { q: "How does Google Cloud Storage (Object Storage) differ from a VM Boot Disk (Block Storage)?", a: "A VM Boot Disk (Persistent Disk) is block storage formatted with a Linux filesystem (ext4/xfs) where the OS and installed binaries live. Cloud Storage (GCS) is an unstructured object store accessed via HTTPS APIs where whole files (blobs) are stored inside globally unique buckets." },
+    { q: "Why must a Cloud Storage bucket name be globally unique?", a: "Because Cloud Storage buckets share a single global DNS and URI namespace (e.g., https://storage.googleapis.com/<bucket-name> or gs://<bucket-name>). No two projects anywhere in the world can share the exact same bucket name." },
+    { q: "When should I use Google Cloud Shell versus installing the gcloud CLI locally?", a: "Use Cloud Shell for quick browser-based administrative commands from any computer. Install the gcloud CLI locally on Windows/Mac/Linux for serious software engineering: building local Spring Boot JARs, IDE authentication (ADC), and running Terraform scripts." },
+    { q: "Why does the Windows Google Cloud SDK installer include 'Bundled Python'?", a: "The core gcloud CLI toolset is written in Python. Installing the bundled Python ensures gcloud has the exact Python runtime version and dependencies it needs without conflicting with your system Python." },
+    { q: "How do I switch between multiple GCP projects or Google accounts in the CLI?", a: "Use 'gcloud config set project <PROJECT_ID>' to change your active project, and 'gcloud config set account <EMAIL>' to switch between authenticated Google accounts." },
+    { q: "Why did 'gcloud compute instance list' fail with an Invalid Choice error?", a: "The gcloud CLI strictly uses the plural noun 'instances' for compute VM operations. The correct syntax is 'gcloud compute instances list'." },
+    { q: "Why does 'gcloud compute instances stop <vm-name>' take so long when I omit the --zone flag?", a: "Without '--zone' or a configured default compute/zone property, gcloud must query every global Google Cloud zone to locate your instance before issuing the stop API call. Setting 'gcloud config set compute/zone us-central1-a' eliminates this lookup delay." },
+    { q: "Why does a VM stay in the 'Stopping' state for 60–90 seconds?", a: "GCP sends a graceful ACPI shutdown signal to the guest Linux OS so running databases and JVM processes can flush buffers cleanly. If a process hangs and refuses to exit, GCP waits until the ~90-second grace timeout expires before cutting power." },
+    { q: "What does the --async flag do in gcloud commands?", a: "Adding '--async' (e.g., 'gcloud compute instances stop my-vm --async') tells gcloud to submit the API request to GCP and return your local command prompt immediately without waiting for the operation to finish." },
+    { q: "How do I copy a compiled Spring Boot JAR from my Windows laptop to my GCP VM?", a: "Use the secure copy command: 'gcloud compute scp target/myapp.jar <vm-name>:~/ --zone=us-central1-a', which tunnels the file over SSH." },
+    { q: "What is the difference between Imperative (gcloud CLI) and Declarative (Terraform) infrastructure management?", a: "With an imperative CLI, you specify the exact sequence of steps to reach a state. With declarative IaC (Terraform), you define the final desired architecture in code, and Terraform automatically calculates what needs to be created, modified, or deleted." },
+    { q: "If I have AWS CLI, Azure CLI, and gcloud CLI installed, how does Terraform know which cloud to use?", a: "Terraform reads the 'provider' block in your .tf file (e.g., provider \"google\" {}). During 'terraform init', it downloads the specific provider plugin, which is programmed to look only for that vendor's credential store." },
+    { q: "Why did Terraform fail with 'Error: Attempted to load application default credentials' even after I ran 'gcloud init'?", a: "'gcloud init' authenticates interactive CLI user commands, whereas external SDKs and tools like Terraform authenticate via Application Default Credentials (ADC). Running 'gcloud auth application-default login' creates the local ADC JSON file Terraform expects." },
+    { q: "Does my Terraform configuration file have to be named main.tf?", a: "No. Terraform automatically loads every file ending in '.tf' within the current working directory. However, 'main.tf', 'variables.tf', and 'outputs.tf' are universal industry conventions." },
+    { q: "Why did 'terraform plan' say 'No changes. Your infrastructure matches the configuration' on my brand-new project?", a: "Either you ran 'terraform plan' in an empty folder, you forgot to save your file in your editor (Ctrl+S), or Windows Notepad secretly named your file 'main.tf.txt' instead of 'main.tf'." },
+    { q: "Do I have to memorize HCL syntax as a Java Architect?", a: "No. You only need to master Terraform's architectural lifecycle and state concepts. You can generate HCL using IDE extensions, AI assistants, 'terraform plan -generate-config-out', or write pure Java using CDK for Terraform (CDKTF)." },
+    { q: "What is stored inside the terraform.tfstate file?", a: "It is a JSON file mapping your declarative resource blocks (like google_compute_instance.tf_vm) to their real-world GCP resource IDs, metadata, serial numbers, and runtime attributes (such as dynamically assigned IP addresses)." },
+    { q: "What do the symbols +, ~, -, and -/+ mean in a 'terraform plan' output?", a: "'+' means a resource will be created; '~' means an existing resource will be updated in-place without downtime; '-' means a resource will be destroyed; '-/+' means an immutable field changed, so the resource must be destroyed and recreated." },
+    { q: "What is the advantage of running 'terraform plan -out=tfplan' before 'terraform apply'?", a: "Without '-out', 'terraform apply' recalculates a brand-new plan on the fly. Saving '-out=tfplan' creates a frozen binary blueprint, guaranteeing 'terraform apply tfplan' executes only the exact changes reviewed, with no confirmation prompt." }
+  ];
+
+  function renderFAQ() {
+    const container = document.getElementById('faqContainer');
+    container.innerHTML = faqData.map((item, idx) => `
+      <div class="accordion-item" data-faq-text="${(item.q + ' ' + item.a).toLowerCase()}">
+        <button class="accordion-btn" onclick="this.parentElement.classList.toggle('active')">
+          <span><span class="q-num">Q${idx + 1}</span> ${item.q}</span>
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-panel">
+          <strong>Answer:</strong> ${item.a}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterFAQ() {
+    const query = document.getElementById('faqSearch').value.toLowerCase();
+    document.querySelectorAll('#faqContainer .accordion-item').forEach(item => {
+      const match = item.getAttribute('data-faq-text').includes(query);
+      item.style.display = match ? 'block' : 'none';
+    });
+  }
+
+  function toggleAllFAQ(expand) {
+    document.querySelectorAll('#faqContainer .accordion-item').forEach(item => {
+      if (item.style.display !== 'none') {
+        item.classList.toggle('active', expand);
+      }
+    });
+  }
+
+  // ==================== INTERACTIVE QUIZ DATA & ENGINE ====================
+  const quizQuestions = [
+    {
+      q: "1. Which boot disk type and size combination is covered under the Google Cloud Always Free tier?",
+      options: [
+        "10 GB Balanced Persistent Disk (pd-balanced)",
+        "Up to 30 GB Standard Persistent Disk (pd-standard)",
+        "50 GB SSD Persistent Disk (pd-ssd)",
+        "100 GB Extreme Persistent Disk"
+      ],
+      correct: 1,
+      rationale: "The Always Free tier includes up to 30 GB-months of Standard Persistent Disk (pd-standard). Balanced or SSD disks incur monthly charges."
+    },
+    {
+      q: "2. What happens if you omit '--zone' when running 'gcloud compute instances stop' and haven't set a default zone?",
+      options: [
+        "The command deletes the instance immediately.",
+        "gcloud queries all global zones to locate the VM, causing a noticeable delay.",
+        "It stops all VMs across all projects.",
+        "It upgrades your account to paid tier."
+      ],
+      correct: 1,
+      rationale: "Without a specified or configured default zone, gcloud must inspect zones globally to resolve the instance name."
+    },
+    {
+      q: "3. Which gcloud flag allows you to immediately regain control of your terminal prompt without waiting for a VM to finish stopping?",
+      options: ["--quiet", "--fast", "--async", "--nowait"],
+      correct: 2,
+      rationale: "The --async flag dispatches the request to the GCP API and immediately returns control to your command prompt."
+    },
+    {
+      q: "4. Which command bridges your local Google Cloud authentication so Terraform can provision GCP resources?",
+      options: [
+        "gcloud init --terraform",
+        "gcloud auth application-default login",
+        "terraform login google",
+        "gcloud compute config-ssh"
+      ],
+      correct: 1,
+      rationale: "Terraform relies on Application Default Credentials (ADC), generated locally via 'gcloud auth application-default login'."
+    },
+    {
+      q: "5. In a Terraform execution plan, what does the '~' (tilde) symbol indicate?",
+      options: [
+        "The resource will be destroyed and recreated.",
+        "The resource will be updated in-place without being destroyed.",
+        "The resource has drifted and will be ignored.",
+        "A new resource will be created."
+      ],
+      correct: 1,
+      rationale: "The '~' symbol represents an in-place modification (such as adding network tags) that does not require destroying the VM."
+    },
+    {
+      q: "6. Why did 'terraform plan' output 'No changes' when a beginner created main.tf in Windows Notepad?",
+      options: [
+        "The e2-micro VM is not supported by Terraform.",
+        "Notepad appended a hidden '.txt' extension (main.tf.txt) or the file wasn't saved.",
+        "Google Cloud requires files to be named google.tf.",
+        "The firewall port 8080 was blocked."
+      ],
+      correct: 1,
+      rationale: "Terraform only parses files ending strictly in '.tf' or '.tf.json'. A file named 'main.tf.txt' is ignored."
+    },
+    {
+      q: "7. Which gcloud command extracts ONLY the raw External IP address of a VM without table headers?",
+      options: [
+        "gcloud compute instances list --ip-only",
+        "gcloud compute instances describe <vm> --format='get(networkInterfaces[0].accessConfigs[0].natIP)'",
+        "gcloud compute ssh --print-ip",
+        "gcloud config get-value ip"
+      ],
+      correct: 1,
+      rationale: "Using --format='get(...)' or 'value(...)' extracts the exact nested property value cleanly for scripting."
+    },
+    {
+      q: "8. What is the key security precaution when using 'terraform plan -out=tfplan'?",
+      options: [
+        "It deletes your SSH keys.",
+        "The tfplan binary file can contain sensitive state variables in cleartext and must not be committed to public Git repos.",
+        "It disables your VPC firewall.",
+        "It forces your VM into a paid region."
+      ],
+      correct: 1,
+      rationale: "Saved plan files contain full configuration and variable values unencrypted, so they should always be excluded via .gitignore."
+    },
+    {
+      q: "9. Which built-in tool introduced in Java 18+ can serve static files on a VM just like 'python3 -m http.server'?",
+      options: ["javac-server", "jwebserver", "spring-httpd", "jvm-nginx"],
+      correct: 1,
+      rationale: "JDK 18 introduced 'jwebserver', a lightweight command-line tool for serving static files out of the box."
+    },
+    {
+      q: "10. What is the primary purpose of 'terraform.tfstate'?",
+      options: [
+        "To store your Google Cloud credit card billing history.",
+        "To map declarative resources in your .tf code to real-world GCP resource IDs and track current state.",
+        "To compile Java Spring Boot code into a JAR.",
+        "To replace the Linux kernel on the VM."
+      ],
+      correct: 1,
+      rationale: "The state file acts as Terraform's source-of-truth database mapping your HCL declarations to live cloud resources."
+    }
+  ];
+
+  function renderQuiz() {
+    const container = document.getElementById('quizContainer');
+    container.innerHTML = quizQuestions.map((item, qIdx) => `
+      <div class="quiz-question" id="qbox-${qIdx}">
+        <h4>${item.q}</h4>
+        <div class="quiz-options">
+          ${item.options.map((opt, oIdx) => `
+            <label class="quiz-option">
+              <input type="radio" name="quiz-q-${qIdx}" value="${oIdx}">
+              <span>${opt}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div class="quiz-feedback" id="qfeed-${qIdx}"></div>
+      </div>
+    `).join('');
+  }
+
+  function gradeQuiz() {
+    let score = 0;
+    quizQuestions.forEach((item, qIdx) => {
+      const selected = document.querySelector(`input[name="quiz-q-${qIdx}"]:checked`);
+      const feed = document.getElementById(`qfeed-${qIdx}`);
+      feed.style.display = 'block';
+      if (selected && parseInt(selected.value) === item.correct) {
+        score++;
+        feed.style.background = 'rgba(16, 185, 129, 0.15)';
+        feed.style.borderLeft = '4px solid #10b981';
+        feed.innerHTML = `<strong>✅ Correct!</strong> ${item.rationale}`;
+      } else {
+        feed.style.background = 'rgba(239, 68, 68, 0.15)';
+        feed.style.borderLeft = '4px solid #ef4444';
+        feed.innerHTML = `<strong>❌ Incorrect.</strong> Correct Answer: <em>${item.options[item.correct]}</em><br>${item.rationale}`;
+      }
+    });
+    document.getElementById('quizScoreDisplay').textContent = `Score: ${score} / ${quizQuestions.length} (${Math.round((score/quizQuestions.length)*100)}%)`;
+  }
+
+  function resetQuiz() {
+    document.querySelectorAll('#quizContainer input[type="radio"]').forEach(r => r.checked = false);
+    document.querySelectorAll('.quiz-feedback').forEach(f => f.style.display = 'none');
+    document.getElementById('quizScoreDisplay').textContent = '';
+  }
+
+  function updateLabProgress() {
+    const checks = document.querySelectorAll('.lab-chk');
+    const done = Array.from(checks).filter(c => c.checked).length;
+    const pct = Math.round((done / checks.length) * 100);
+    document.getElementById('labProgressBar').style.width = pct + '%';
+    document.getElementById('labProgressText').textContent = `${done} / ${checks.length} Completed (${pct}%)`;
+  }
+
+  // Initialize dynamic views on load
+  renderFAQ();
+  renderQuiz();
+</script>
+
+</body>
+</html>
