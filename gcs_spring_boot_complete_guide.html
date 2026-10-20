@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Cloud Storage, Java SDK & Spring Boot Masterclass | Prof. Soham Sengupta</title>
+<style>
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: rgba(37, 99, 235, 0.12);
+    --border: #e2e8f0;
+    --code-bg: #0f172a;
+    --code-header: #1e293b;
+    --code-text: #e2e8f0;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --header-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --base-font-size: 16px;
+    --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #090d16;
+    --bg-card: #111827;
+    --bg-subtle: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border: #1f2937;
+    --code-bg: #030712;
+    --code-header: #111827;
+    --code-text: #f1f5f9;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --header-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  }
+
+  [data-accent="blue"] { --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: rgba(37, 99, 235, 0.14); }
+  [data-accent="emerald"] { --accent: #10b981; --accent-hover: #059669; --accent-soft: rgba(16, 185, 129, 0.14); }
+  [data-accent="purple"] { --accent: #8b5cf6; --accent-hover: #7c3aed; --accent-soft: rgba(139, 92, 246, 0.14); }
+  [data-accent="rose"] { --accent: #f43f5e; --accent-hover: #e11d48; --accent-soft: rgba(244, 63, 94, 0.14); }
+  [data-accent="amber"] { --accent: #f59e0b; --accent-hover: #d97706; --accent-soft: rgba(245, 158, 11, 0.14); }
+
+  * { box-sizing: border-box; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+  html { font-size: var(--base-font-size); scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.65;
+  }
+
+  header {
+    background: var(--header-gradient);
+    color: #ffffff;
+    padding: 18px 28px 12px 28px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1420px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .brand-title h1 {
+    font-size: 1.35rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-title p {
+    margin: 3px 0 0 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn, .ctrl-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 6px 11px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .ctrl-select option { background: #0f172a; color: #fff; }
+  .ctrl-btn:hover, .ctrl-select:hover { background: rgba(255, 255, 255, 0.22); border-color: var(--accent); }
+
+  .color-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .color-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .color-dot.active { border-color: #ffffff; transform: scale(1.18); }
+
+  .nav-tabs {
+    display: flex;
+    max-width: 1420px;
+    margin: 14px auto 0 auto;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-tab {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #cbd5e1;
+    padding: 9px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .nav-tab:hover { color: #ffffff; background: rgba(255, 255, 255, 0.16); }
+  .nav-tab.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+
+  .container {
+    max-width: 1420px;
+    margin: 26px auto;
+    padding: 0 24px;
+  }
+
+  .tab-pane { display: none; animation: fadeIn 0.25s ease-out; }
+  .tab-pane.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--accent);
+    padding: 18px 24px;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+
+  .hero-banner h2 { margin: 0; font-size: 1.24rem; }
+  .hero-banner p { margin: 4px 0 0 0; font-size: 0.88rem; color: var(--text-secondary); }
+
+  .badge-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .card h3 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.14rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin: 16px 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+
+  .info-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .info-box h4 { margin: 0 0 8px 0; font-size: 0.96rem; color: var(--text-primary); }
+  .info-box p, .info-box ul { margin: 0; font-size: 0.89rem; color: var(--text-secondary); }
+  .info-box ul { padding-left: 18px; }
+
+  .callout {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+  }
+  .callout.warn { border-left-color: var(--warning); background: rgba(245, 158, 11, 0.12); }
+  .callout.danger { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+  .callout.success { border-left-color: var(--success); background: rgba(16, 185, 129, 0.12); }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--bg-card); }
+  th, td { border: 1px solid var(--border); padding: 11px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-subtle); font-weight: 700; color: var(--text-primary); }
+  tr:nth-child(even) { background: rgba(148, 163, 184, 0.04); }
+
+  .code-editor {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .code-header {
+    background: var(--code-header);
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+  }
+
+  .code-lang {
+    font-family: Consolas, monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .copy-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+  .code-editor pre {
+    margin: 0;
+    padding: 15px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.84rem;
+    color: var(--code-text);
+    line-height: 1.55;
+  }
+
+  code.inline {
+    background: var(--bg-subtle);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+    font-size: 0.85em;
+    border: 1px solid var(--border);
+  }
+
+  /* Filter Toolbar & Accordions */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-input, .filter-select {
+    padding: 9px 13px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.88rem;
+  }
+  .search-input { flex: 1; min-width: 240px; }
+
+  .action-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 0.84rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .action-btn.secondary {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .accordion-list { display: flex; flex-direction: column; gap: 10px; }
+  .accordion-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    overflow: hidden;
+  }
+
+  .accordion-btn {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: none;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.91rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-family: inherit;
+  }
+
+  .accordion-arrow { transition: transform 0.25s ease; font-size: 0.8rem; color: var(--accent); }
+  .accordion-item.active .accordion-arrow { transform: rotate(180deg); }
+
+  .accordion-panel {
+    display: none;
+    padding: 15px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 0.89rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+  }
+  .accordion-item.active .accordion-panel { display: block; }
+
+  .q-num {
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .diff-tag, .cat-tag {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-right: 6px;
+    display: inline-block;
+  }
+  .diff-Easy { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  .diff-Medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+  .diff-Tricky { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  .cat-tag { background: var(--accent-soft); color: var(--accent); }
+
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: #fff;
+    padding: 11px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  footer {
+    text-align: center;
+    padding: 26px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    margin-top: 40px;
+    background: var(--bg-card);
+  }
+</style>
+</head>
+<body data-theme="light" data-accent="blue">
+
+<header>
+  <div class="header-top">
+    <div class="brand-title">
+      <h1>☁️ Google Cloud Storage, Java SDK &amp; Spring Boot Masterclass</h1>
+      <p>Complete Architecture, CLI, IP Lockout Rescue, SDK &amp; 50 Certification Q&amp;As | Prof. Soham Sengupta</p>
+    </div>
+
+    <div class="controls-bar">
+      <div class="color-dots" title="Accent Theme Color">
+        <span class="color-dot active" style="background:#2563eb;" onclick="setAccent('blue', this)"></span>
+        <span class="color-dot" style="background:#10b981;" onclick="setAccent('emerald', this)"></span>
+        <span class="color-dot" style="background:#8b5cf6;" onclick="setAccent('purple', this)"></span>
+        <span class="color-dot" style="background:#f43f5e;" onclick="setAccent('rose', this)"></span>
+        <span class="color-dot" style="background:#f59e0b;" onclick="setAccent('amber', this)"></span>
+      </div>
+
+      <select class="ctrl-select" onchange="changeFontFamily(this.value)" title="Select Font Family">
+        <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">Font: Modern Sans</option>
+        <option value="Georgia, Cambria, serif">Font: Academic Serif</option>
+        <option value="Consolas, 'Courier New', monospace">Font: Monospace</option>
+      </select>
+
+      <button class="ctrl-btn" onclick="changeFontSize(-1)" title="Decrease Font Size">A-</button>
+      <button class="ctrl-btn" onclick="changeFontSize(1)" title="Increase Font Size">A+</button>
+      <button class="ctrl-btn" onclick="toggleTheme()"><span id="themeIcon">🌙</span> <span id="themeText">Dark</span></button>
+      <button class="ctrl-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+    </div>
+  </div>
+
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="openTab(event, 'tab-basics')">1. GCS Basics &amp; Buckets</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-classes')">2. Storage Classes &amp; Versioning</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-cli')">3. gcloud CLI &amp; REST CRUD</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-lockout')">4. IP Lockout Rescue &amp; IAM</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-java')">5. Plain Java SDK Integration</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-spring')">6. Spring Boot &amp; Use Cases</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-cert50')">7. 50 Certification Q&amp;As</button>
+  </nav>
+</header>
+
+<main class="container">
+
+  <!-- ==================== TAB 1: GCS BASICS, BUCKETS & CONSTRAINTS ==================== -->
+  <section id="tab-basics" class="tab-pane active">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 1: Compute vs. Storage Primitives, Bucket Architecture &amp; Naming Rules</h2>
+        <p>From CPU/vCPU Hardware Virtualization to Object Storage Flat Namespaces and Naming Constraints</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">1 Core = 2 vCPUs</span>
+        <span class="badge">Object vs Block Storage</span>
+        <span class="badge">Bucket Constraints</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Compute Foundation Recap: Physical CPU vs. Virtual CPU (vCPU)</h3>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🖥️ Physical CPU vs. vCPU</h4>
+          <p>A <strong>CPU</strong> is the physical silicon processor installed on a data center server motherboard. A <strong>vCPU (Virtual CPU)</strong> is a logical, time-sliced execution thread scheduled by a hypervisor (such as KVM) and exposed to your guest VM.</p>
+        </div>
+        <div class="info-box">
+          <h4>⚡ 1 Server Core = How Many Client vCPUs?</h4>
+          <p>Modern enterprise server processors utilize Simultaneous Multithreading (SMT / Intel Hyper-Threading), splitting 1 physical processor core into 2 independent hardware execution threads. Thus, in GCP, <strong>1 physical server core = 2 vCPUs</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Cloud Storage Levels &amp; Why It Is Called a "Bucket"</h3>
+      <p>Cloud storage is divided into three architectural levels: <strong>File Storage</strong> (hierarchical network folders like Filestore), <strong>Block Storage</strong> (raw low-latency volumes like Persistent Disks used for VM boot drives and databases), and <strong>Object Storage</strong> (Google Cloud Storage).</p>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🪣 What is a Bucket &amp; What Can It Store?</h4>
+          <p>A <strong>Bucket</strong> is the top-level root container in Google Cloud Storage used to hold unstructured binary objects of any format (up to 5 TB per single object)—including images, 4K videos, CSV datasets, database backups, and compiled Spring Boot <code class="inline">.jar</code> files.</p>
+        </div>
+        <div class="info-box">
+          <h4>📂 Why Called a "Bucket" Instead of a "Folder"?</h4>
+          <p>Traditional file systems use nested hierarchical directory trees where renaming a top folder requires updating every child path. Object storage uses a <strong>single flat namespace</strong>—like tossing millions of items into one giant bucket. "Folders" seen in the UI (e.g., <code class="inline">images/2026/logo.png</code>) are simply visual illusions created by `/` characters in the object's string key!</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Bucket Naming Conventions, Constraints &amp; Location Types</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Constraint Rule</th>
+              <th>Technical Requirement</th>
+              <th>Valid vs. Invalid Examples</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Global Uniqueness</strong></td>
+              <td>Bucket names share a single global DNS namespace across all GCP customers worldwide.Once deleted, the name becomes available to others.</td>
+              <td>✅ <code class="inline">ivory-link-spring-assets-2026</code><br>❌ <code class="inline">test-bucket</code> (Already taken globally)</td>
+            </tr>
+            <tr>
+              <td><strong>Character Set &amp; Case</strong></td>
+              <td>Must contain <strong>only lowercase letters</strong>, numbers, hyphens (<code class="inline">-</code>), and underscores (<code class="inline">_</code>). Uppercase letters and spaces are prohibited.</td>
+              <td>✅ <code class="inline">soham_sg_demo-01</code><br>❌ <code class="inline">Soham_Bucket_01</code> (Uppercase)</td>
+            </tr>
+            <tr>
+              <td><strong>Length Limits</strong></td>
+              <td>Must be between <strong>3 and 63 characters</strong> long (up to 222 characters only if verifying domain ownership with dots).</td>
+              <td>✅ <code class="inline">app-logs-prod</code><br>❌ <code class="inline">ab</code> (Too short)</td>
+            </tr>
+            <tr>
+              <td><strong>Start &amp; End Characters</strong></td>
+              <td>Must begin and end strictly with a lowercase letter or number.</td>
+              <td>✅ <code class="inline">bucket-2026</code><br>❌ <code class="inline">-bucket-2026-</code></td>
+            </tr>
+            <tr>
+              <td><strong>Reserved Prefixes &amp; Formats</strong></td>
+              <td>Cannot start with the prefix <code class="inline">goog</code>, cannot contain the word <code class="inline">google</code> (or close misspellings like <code class="inline">g00gle</code>), and cannot be formatted as an IP address.</td>
+              <td>✅ <code class="inline">gcp-study-portal-bucket</code><br>❌ <code class="inline">google-test-bucket</code> or <code class="inline">192.168.1.1</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>📍 Regional Bucket</h4>
+          <p>Data is replicated across multiple zones within a <strong>single region</strong> (e.g., <code class="inline">us-central1</code>). Lowest cost; best when co-located with Compute Engine VMs or GKE clusters to eliminate cross-region network latency.</p>
+        </div>
+        <div class="info-box">
+          <h4>🌍 Dual-Region Bucket</h4>
+          <p>Data is replicated across a <strong>specific pair of regions</strong> (e.g., <code class="inline">us-central1</code> + <code class="inline">us-east1</code>). Offers high availability and optional Turbo Replication (15-minute RPO) for disaster recovery.</p>
+        </div>
+        <div class="info-box">
+          <h4>🌐 Multi-Region Bucket</h4>
+          <p>Data is distributed across a large continental area (e.g., <code class="inline">US</code>, <code class="inline">EU</code>, <code class="inline">ASIA</code>). Offers 99.95%–99.99% availability SLA; ideal for serving public static assets to distributed end users.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 2: STORAGE CLASSES, METADATA & VERSIONING ==================== -->
+  <section id="tab-classes" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 2: Storage Classes, Object Metadata, Caching &amp; Versioning</h2>
+        <p>Balancing Storage vs. Retrieval Costs, Leveraging Metadata in Production, and Managing Object Generations</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">11 9s Durability</span>
+        <span class="badge">Object Versioning</span>
+        <span class="badge">Cache-Control &amp; Metadata</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Google Cloud Storage Classes, Pricing &amp; Use Cases (2026)</h3>
+      <p>All GCS storage classes provide <strong>99.999999999% (11 9s) annual durability</strong> and millisecond first-byte latency. They differ in monthly storage price, minimum storage duration, and per-GB retrieval fees:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Storage Class</th>
+              <th>Regional US Storage Cost</th>
+              <th>Min Storage Duration</th>
+              <th>Retrieval Fee / GB</th>
+              <th>Target Access Pattern &amp; Enterprise Use Cases</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Standard</strong></td>
+              <td>~$0.020 / GB / month</td>
+              <td>None (0 days)</td>
+              <td>None ($0.00)</td>
+              <td><strong>Hot Data:</strong> Active website media, streaming videos, mobile app uploads, and frequent data analytics pipelines.</td>
+            </tr>
+            <tr>
+              <td><strong>Nearline</strong></td>
+              <td>~$0.010 / GB / month</td>
+              <td><strong>30 days</strong></td>
+              <td>$0.01 / GB</td>
+              <td><strong>Warm Data (&lt; 1x/month):</strong> Monthly database backups, user-generated archive media, and periodic reporting logs.</td>
+            </tr>
+            <tr>
+              <td><strong>Coldline</strong></td>
+              <td>~$0.004 / GB / month</td>
+              <td><strong>90 days</strong></td>
+              <td>$0.02 / GB</td>
+              <td><strong>Cold Data (&lt; 1x/quarter):</strong> Disaster recovery snapshots, quarterly financial audits, and telemetry archives.</td>
+            </tr>
+            <tr>
+              <td><strong>Archive</strong></td>
+              <td>~$0.0012 / GB / month</td>
+              <td><strong>365 days</strong></td>
+              <td>$0.05 / GB</td>
+              <td><strong>Frozen Data (&lt; 1x/year):</strong> 7–10 year healthcare HIPAA records, banking compliance, and tape replacement.</td>
+            </tr>
+            <tr>
+              <td><strong>Autoclass</strong> <em>(Feature)</em></td>
+              <td>Dynamic ($0.020 &rarr; $0.0012)</td>
+              <td>None (No early deletion fee!)</td>
+              <td>None ($0.00)</td>
+              <td><strong>Unpredictable Workloads:</strong> Automatically transitions unaccessed objects down to colder tiers and promotes them back to Standard on read.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <strong>Early Deletion Penalty Rule:</strong> If you delete, overwrite, or transition an object in <strong>Nearline (30d)</strong>, <strong>Coldline (90d)</strong>, or <strong>Archive (365d)</strong> before its minimum duration expires, GCP bills you for the remaining days as if the object stayed in the bucket.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Object Metadata &amp; Built-In Caching (<code class="inline">Cache-Control</code>)</h3>
+      <p>Every GCS object consists of raw binary data plus key-value <strong>Metadata</strong>. Metadata is divided into <strong>Fixed-Key Metadata</strong> (HTTP headers &amp; system properties) and <strong>Custom Metadata</strong> (<code class="inline">x-goog-meta-*</code> user-defined tags):</p>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>🏷️ Real-Life Enterprise Metadata Use Cases</h4>
+          <ul>
+            <li><strong>Data Lake &amp; ETL Filtering:</strong> Tagging raw files with <code class="inline">source-system=CRM</code> and <code class="inline">schema-version=v2</code> so Dataflow jobs filter objects without reading file payloads.</li>
+            <li><strong>Automated Content Moderation:</strong> Setting <code class="inline">moderation-status=pending</code> on user uploads until a Cloud Vision webhook updates it to <code class="inline">approved</code>.</li>
+            <li><strong>Browser Rendering Control:</strong> Setting <code class="inline">Content-Type: application/pdf</code> or <code class="inline">text/plain</code> so browsers render files inline instead of downloading raw binary streams.</li>
+          </ul>
+        </div>
+        <div class="info-box">
+          <h4>⚡ Caching in GCS (<code class="inline">Cache-Control</code> &amp; Rapid Cache)</h4>
+          <ul>
+            <li><strong>HTTP Edge Caching:</strong> Publicly readable objects default to <code class="inline">Cache-Control: public, max-age=3600</code>, caching assets in browsers and Cloud CDN for 1 hour to slash egress billing. For dynamic config files, set <code class="inline">Cache-Control: no-cache, no-store</code>.</li>
+            <li><strong>Rapid Cache (Anywhere Cache):</strong> An SSD-backed zonal read cache inside GCP data centers that accelerates bursty AI/ML training reads from multi-region buckets.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Object Versioning: Problem, Solution &amp; Generation Mechanics</h3>
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>🚨 The Problem</h4>
+          <p>Cloud Storage objects are <strong>immutable</strong>. Overwriting <code class="inline">backup.sql</code> with a corrupted 0-byte file or accidentally running <code class="inline">rm</code> permanently destroys the original data in a standard bucket.</p>
+        </div>
+        <div class="info-box">
+          <h4>🛡️ The Solution</h4>
+          <p>Enable <strong>Object Versioning</strong> on the bucket. When an object is overwritten or deleted, GCS keeps the old copy as a <em>noncurrent version</em> identified by a 16-digit <code class="inline">generation</code> number.</p>
+        </div>
+        <div class="info-box">
+          <h4>🔍 Live vs. Noncurrent Check</h4>
+          <p>The <strong>current (live) version</strong> has <code class="inline">time_deleted = null</code> (absent in CLI output). A <strong>noncurrent version</strong> has a populated <code class="inline">time_deleted</code> timestamp and requires <code class="inline">#generation</code> to access.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 3: GCLOUD CLI & REST CRUD ==================== -->
+  <section id="tab-cli" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 3: <code class="inline">gcloud storage</code> CLI CRUD, Non-Empty Bucket Deletion &amp; REST APIs</h2>
+        <p>Managing Buckets, Uploading/Downloading Objects, Making Buckets Public, and Inspecting Object Metadata</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">gcloud storage</span>
+        <span class="badge">rm --recursive</span>
+        <span class="badge">JSON REST API</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Bucket-Level CLI Commands &amp; Removing a Non-Empty Bucket</h3>
+      <div class="callout danger">
+        <strong>How to Delete a Non-Empty Bucket vs. an Empty Bucket:</strong><br>
+        &bull; <code class="inline">gcloud storage buckets delete gs://my-bucket</code> <strong>FAILS</strong> if the bucket contains any objects or noncurrent versions (safety check).<br>
+        &bull; <code class="inline">gcloud storage rm --recursive gs://my-bucket</code> (or <code class="inline">-r</code>) deletes all objects, all versions, <strong>and</strong> the bucket itself in one fast parallel operation!<br>
+        &bull; <code class="inline">gcloud storage rm "gs://my-bucket/**"</code> deletes all objects inside the bucket while keeping the empty bucket intact.
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — BUCKET CRUD, PUBLIC ACCESS &amp; NON-EMPTY DELETION</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Create a Regional Standard Bucket with Uniform Bucket-Level Access
+gcloud storage buckets create gs://soham-sg-test \
+    --location=us-central1 \
+    --default-storage-class=STANDARD \
+    --uniform-bucket-level-access
+
+# 2. List &amp; Describe Buckets
+gcloud storage buckets list
+gcloud storage buckets describe gs://soham-sg-test
+
+# 3. Enable Object Versioning on the Bucket
+gcloud storage buckets update gs://soham-sg-test --versioning
+
+# 4. Make All Objects in the Bucket Publicly Readable on the Internet
+gcloud storage buckets add-iam-policy-binding gs://soham-sg-test \
+    --member="allUsers" \
+    --role="roles/storage.objectViewer"
+
+# 5. Delete an EMPTY Bucket (Throws error if objects exist)
+gcloud storage buckets delete gs://soham-sg-test
+
+# 6. Force Delete a NON-EMPTY Bucket (Deletes all objects + versions + the bucket itself)
+gcloud storage rm --recursive gs://soham-sg-test</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Object-Level CLI CRUD &amp; Version Inspection</h3>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — OBJECT UPLOAD, DOWNLOAD, STREAMING &amp; VERSION RESTORE</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Store (Upload) a Single File or Entire Folder (-r)
+gcloud storage cp sample-text.txt gs://soham-sg-test/
+gcloud storage cp -r ./local-assets gs://soham-sg-test/assets/
+
+# 2. List Only Live Objects vs. List All Versions (--all-versions / -a)
+gcloud storage ls gs://soham-sg-test/
+gcloud storage ls --all-versions gs://soham-sg-test/sample-text.txt
+
+# 3. Read Object Directly in Terminal Without Downloading
+gcloud storage cat gs://soham-sg-test/sample-text.txt
+
+# 4. Retrieve (Download) Object to Local Machine
+gcloud storage cp gs://soham-sg-test/sample-text.txt ./downloaded-sample.txt
+
+# 5. Inspect Complete Object Metadata (Generation, Hashes, ETag, Timestamps)
+gcloud storage objects describe gs://soham-sg-test/sample-text.txt
+
+# 6. Restore a Noncurrent Version to Become the New Live Version
+gcloud storage cp gs://soham-sg-test/sample-text.txt#1792501647883130 gs://soham-sg-test/sample-text.txt</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Plain HTTP REST APIs for Bucket &amp; Object CRUD</h3>
+      <p>Under the hood, both the <code class="inline">gcloud</code> CLI and Java SDK invoke Google Cloud Storage's JSON REST API endpoints over HTTPS[cite: 5]:</p>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">HTTP / CURL — RAW JSON REST API ENDPOINTS</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. CREATE BUCKET (POST)
+curl -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "soham-rest-bucket-2026", "location": "US-CENTRAL1", "storageClass": "STANDARD"}' \
+  "https://storage.googleapis.com/storage/v1/b?project=ivory-link-511508-u3"
+
+# 2. UPLOAD OBJECT (POST to /upload/storage/v1)
+curl -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: text/plain" \
+  --data-binary "Hello via Plain REST API" \
+  "https://storage.googleapis.com/upload/storage/v1/b/soham-sg-test/o?uploadType=media&amp;name=rest-note.txt"
+
+# 3. DOWNLOAD OBJECT PAYLOAD (GET with ?alt=media)
+curl -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://storage.googleapis.com/storage/v1/b/soham-sg-test/o/rest-note.txt?alt=media"
+
+# 4. GET OBJECT METADATA JSON (GET without alt=media)
+curl -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://storage.googleapis.com/storage/v1/b/soham-sg-test/o/rest-note.txt"
+
+# 5. DELETE OBJECT (DELETE)
+curl -X DELETE -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://storage.googleapis.com/storage/v1/b/soham-sg-test/o/rest-note.txt"</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 4: IP LOCKOUT RESCUE & IAM ==================== -->
+  <section id="tab-lockout" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 4: Bucket IP Filter Lockout Troubleshooting &amp; IAM Architecture</h2>
+        <p>Why <code class="inline">0.0.0.0/0</code> Locks You Out on IPv6 Networks, Break-Glass IAM Recovery, and Service Account vs. Owner</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">IPv4 vs IPv6 Lockout</span>
+        <span class="badge">exemptFromIpFilter</span>
+        <span class="badge">Least Privilege IAM</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Why Applying <code class="inline">0.0.0.0/0</code> to a Bucket IP Filter Causes "Access Denied"</h3>
+      <p>When you enable GCS Bucket IP Filtering and allow only <code class="inline">0.0.0.0/0</code>, you expect the bucket to be open to all networks. Instead, both the GCP Console and CLI immediately block you with: <code class="inline">Access denied due to either IP filtering or VPC configuration</code>. Here is why:</p>
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>1️⃣ IPv6 Routing Exclusion</h4>
+          <p><code class="inline">0.0.0.0/0</code> only matches 32-bit <strong>IPv4</strong> addresses. Modern broadband ISPs and mobile 5G hotspots route Google traffic over 128-bit <strong>IPv6</strong> by default. Without <code class="inline">::/0</code> in your allowed list, every IPv6 packet from your machine is rejected!</p>
+        </div>
+        <div class="info-box">
+          <h4>2️⃣ Internal VPC Routing</h4>
+          <p>Requests originating from Compute Engine VMs, Cloud Run, or GKE inside a GCP VPC travel over Google's internal network rather than the public internet, so they ignore <code class="inline">publicNetworkSource</code> rules unless the VPC is explicitly listed.</p>
+        </div>
+        <div class="info-box">
+          <h4>3️⃣ Blocked Service Agents</h4>
+          <p>Enabling IP filtering blocks internal Google Cloud service agents unless <code class="inline">allowAllServiceAgentAccess: true</code> is explicitly set in the filter configuration.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Step-by-Step Break-Glass Rescue Procedure (When Locked Out of Your Bucket)</h3>
+      <p>If even <code class="inline">gcloud storage buckets update gs://BUCKET --clear-ip-filter</code> fails with Access Denied because your ISP/hotspot uses IPv6, you must grant yourself the project-level <code class="inline">storage.buckets.exemptFromIpFilter</code> permission via a custom IAM role:</p>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — BREAK-GLASS IAM ROLE CREATION &amp; IP FILTER REMOVAL</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># STEP 1: Create a Custom IAM Role containing the IP Filter Exemption permission
+gcloud iam roles create ip_filter_recovery \
+    --project="ivory-link-511508-u3" \
+    --title="IP Filter Recovery" \
+    --permissions="storage.buckets.exemptFromIpFilter" \
+    --stage="GA"
+
+# STEP 2: Bind the Custom Recovery Role to Your Google Account at the Project Level
+gcloud projects add-iam-policy-binding "ivory-link-511508-u3" \
+    --member="user:sohamsironline@gmail.com" \
+    --role="projects/ivory-link-511508-u3/roles/ip_filter_recovery"
+
+# STEP 3: Wait ~2 minutes for global IAM caching to propagate, then wipe the IP filter!
+gcloud storage buckets update gs://soham-sg-test --clear-ip-filter</code></pre>
+      </div>
+
+      <h4>Safe Dual-Stack (IPv4 + IPv6 + VPC) <code class="inline">ip-filter-config.json</code> Blueprint</h4>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JSON — ip-filter-config.json (PREVENTS IPV6 &amp; VPC LOCKOUTS)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>{
+  "mode": "Enabled",
+  "publicNetworkSource": {
+    "allowedIpCidrRanges": [
+      "0.0.0.0/0",
+      "::/0"
+    ]
+  },
+  "vpcNetworkSources": [
+    {
+      "network": "projects/ivory-link-511508-u3/global/networks/default",
+      "allowedIpCidrRanges": ["10.0.0.0/8"]
+    }
+  ],
+  "allowAllServiceAgentAccess": true,
+  "allowCrossOrgVpcs": false
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. IAM Architecture: Service Account vs. Owner Role</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Service Account (Identity — "WHO")</th>
+              <th>Owner / <code class="inline">roles/owner</code> (Role — "WHAT")</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Architectural Category</strong></td>
+              <td>A non-human machine <strong>Principal / Identity</strong> used by VMs, Cloud Run services, and Spring Boot apps to authenticate API calls.</td>
+              <td>A legacy primitive <strong>IAM Role</strong> (collection of thousands of permissions) granting unrestricted administrative control over a project.</td>
+            </tr>
+            <tr>
+              <td><strong>How It Works</strong></td>
+              <td>Authenticates via short-lived OAuth tokens, Attached VM Metadata, or cryptographic JSON keys rather than browser passwords.</td>
+              <td>Can be assigned to a human user, a Google Group, or a Service Account. Allows modifying billing and deleting any resource.</td>
+            </tr>
+            <tr>
+              <td><strong>Security Best Practice</strong></td>
+              <td>Assign narrow predefined roles (e.g., <code class="inline">roles/storage.objectAdmin</code> on a single bucket) rather than project-wide primitive roles.</td>
+              <td><strong>Never grant <code class="inline">roles/owner</code> to a Service Account!</strong> If its JSON key leaks on GitHub, attackers gain full control of your cloud project.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 5: PLAIN JAVA SDK INTEGRATION ==================== -->
+  <section id="tab-java" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 5: Plain Java SDK (<code class="inline">google-cloud-storage</code>) Deep Dive</h2>
+        <p>Core Classes, Methods, Preconditions, Object Versioning Management, and Line-by-Line Annotated Code</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Storage &amp; StorageOptions</span>
+        <span class="badge">BlobId &amp; BlobInfo</span>
+        <span class="badge">Versioning &amp; Preconditions</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Core Classes &amp; Interfaces in <code class="inline">com.google.cloud.storage</code></h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Class / Interface</th>
+              <th>Architectural Purpose</th>
+              <th>Key Methods &amp; Signatures</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="inline">Storage</code> <em>(Interface)</em></td>
+              <td>Central thread-safe client interface for executing all Bucket and Object CRUD, copy, and signing operations.</td>
+              <td><code class="inline">create(BucketInfo)</code>, <code class="inline">create(BlobInfo, byte[], BlobTargetOption...)</code>, <code class="inline">readAllBytes(BlobId)</code>, <code class="inline">get(BlobId)</code>, <code class="inline">list(String, BlobListOption...)</code>, <code class="inline">copy(CopyRequest)</code>, <code class="inline">delete(BlobId)</code></td>
+            </tr>
+            <tr>
+              <td><code class="inline">StorageOptions</code> <em>(Class)</em></td>
+              <td>Factory builder that configures project ID, retry settings, and discovers Application Default Credentials (ADC).</td>
+              <td><code class="inline">StorageOptions.getDefaultInstance().getService()</code>, <code class="inline">StorageOptions.newBuilder().setProjectId(...).build()</code></td>
+            </tr>
+            <tr>
+              <td><code class="inline">BucketInfo</code> &amp; <code class="inline">Bucket</code></td>
+              <td><code class="inline">BucketInfo</code> holds immutable configuration metadata (location, storage class, versioning); <code class="inline">Bucket</code> adds live methods.</td>
+              <td><code class="inline">BucketInfo.newBuilder(name).setLocation("us-central1").setStorageClass(StorageClass.STANDARD).setVersioningEnabled(true).build()</code></td>
+            </tr>
+            <tr>
+              <td><code class="inline">BlobId</code> <em>(Class)</em></td>
+              <td>Composite primary key identifying an object by <code class="inline">(bucketName, objectName, [generation])</code>.</td>
+              <td><code class="inline">BlobId.of(bucket, name)</code>, <code class="inline">BlobId.of(bucket, name, generationLong)</code></td>
+            </tr>
+            <tr>
+              <td><code class="inline">BlobInfo</code> &amp; <code class="inline">Blob</code></td>
+              <td>Encapsulates system metadata (<code class="inline">Content-Type</code>, <code class="inline">Cache-Control</code>) and custom key-value map (<code class="inline">Map&lt;String,String&gt;</code>).</td>
+              <td><code class="inline">BlobInfo.newBuilder(blobId).setContentType("text/plain").setCacheControl("public, max-age=3600").setMetadata(map).build()</code></td>
+            </tr>
+            <tr>
+              <td><code class="inline">Storage.BlobTargetOption</code> / <code class="inline">BlobWriteOption</code></td>
+              <td>Enforces atomic concurrency preconditions during writes to prevent race conditions and accidental overwrites.</td>
+              <td><code class="inline">BlobTargetOption.doesNotExist()</code>, <code class="inline">BlobTargetOption.generationMatch(gen)</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Complete Plain Java SDK Example: CRUD, Metadata &amp; Versioning</h3>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">XML — MAVEN POM.XML DEPENDENCY</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.google.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;google-cloud-storage&lt;/artifactId&gt;
+    &lt;version&gt;2.75.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — CRUD, CUSTOM METADATA, LIVE VS NONCURRENT VERSION CHECK &amp; RESTORE</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>import com.google.cloud.storage.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+public class GcsPlainJavaMaster {
+
+    public static void main(String[] args) {
+        // 1. Auto-discover local ADC credentials (from 'gcloud auth application-default login')
+        Storage storage = StorageOptions.getDefaultInstance().getService();
+
+        String bucketName = "soham-sg-test";
+        String objectName = "architecture-notes.txt";
+
+        // 2. Enable Object Versioning on the Bucket
+        Bucket bucket = storage.get(bucketName);
+        bucket.toBuilder().setVersioningEnabled(true).build().update();
+
+        // 3. Create (Upload) Version 1 with Fixed &amp; Custom Metadata
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfoV1 = BlobInfo.newBuilder(blobId)
+                .setContentType("text/plain")
+                .setCacheControl("no-cache")
+                .setMetadata(Map.of("author", "Prof-Soham", "module", "Cloud-Storage", "env", "dev"))
+                .build();
+
+        Blob v1 = storage.create(blobInfoV1, "Version 1 Content: Initial Draft".getBytes(StandardCharsets.UTF_8));
+        System.out.println("Uploaded V1 Generation: " + v1.getGeneration());
+
+        // 4. Overwrite with Version 2 (V1 automatically becomes NONCURRENT)
+        Blob v2 = storage.create(blobInfoV1, "Version 2 Content: Updated Final".getBytes(StandardCharsets.UTF_8));
+        System.out.println("Uploaded V2 (Live) Generation: " + v2.getGeneration());
+
+        // 5. Read the Current Live Version
+        byte[] liveBytes = storage.readAllBytes(blobId);
+        System.out.println("Current Live Payload: " + new String(liveBytes, StandardCharsets.UTF_8));
+
+        // 6. List All Generations and Identify CURRENT (Live) vs NONCURRENT
+        Iterable&lt;Blob&gt; allVersions = storage.list(
+                bucketName,
+                Storage.BlobListOption.prefix(objectName),
+                Storage.BlobListOption.versions(true) // Crucial: includes archived generations
+        ).iterateAll();
+
+        long archivedGenToRestore = 0L;
+        for (Blob b : allVersions) {
+            if (b.getName().equals(objectName)) {
+                // If getDeleteTimeOffsetDateTime() is null, it is the LIVE version!
+                boolean isLive = (b.getDeleteTimeOffsetDateTime() == null);
+                System.out.println((isLive ? "[LIVE CURRENT] " : "[NONCURRENT]   ")
+                        + "Gen: " + b.getGeneration() + " | Custom Meta: " + b.getMetadata());
+                if (!isLive) {
+                    archivedGenToRestore = b.getGeneration();
+                }
+            }
+        }
+
+        // 7. Restore Noncurrent Version back to Live via CopyRequest
+        if (archivedGenToRestore != 0L) {
+            BlobId historicalSource = BlobId.of(bucketName, objectName, archivedGenToRestore);
+            storage.copy(Storage.CopyRequest.newBuilder()
+                    .setSource(historicalSource)
+                    .setTarget(blobId)
+                    .build());
+            System.out.println("Restored generation " + archivedGenToRestore + " as the new live object!");
+        }
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 6: SPRING BOOT INTEGRATION & USE CASES ==================== -->
+  <section id="tab-spring" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 6: Spring Boot Integration, ADC Auto-Discovery &amp; Enterprise Use Cases</h2>
+        <p>Using <code class="inline">spring-cloud-gcp-starter-storage</code>, <code class="inline">application.properties</code>, <code class="inline">gs://</code> Resource Abstraction, and Native <code class="inline">Storage</code> Bean</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Spring Cloud GCP 8.2.x</span>
+        <span class="badge">ADC Discovery Chain</span>
+        <span class="badge">5 Production Use Cases</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. How Spring Boot Auto-Discovers Your Credentials (ADC Chain) &amp; <code class="inline">application.properties</code></h3>
+      <p>When your Spring Boot application starts, <code class="inline">spring-cloud-gcp-starter-storage</code> initializes a <code class="inline">Storage</code> bean using Google's <strong>Application Default Credentials (ADC)</strong> lookup chain:</p>
+      <div class="grid-3">
+        <div class="info-box">
+          <h4>Step 1: Explicit Property / Env Var</h4>
+          <p>Checks <code class="inline">spring.cloud.gcp.storage.credentials.location</code> in <code class="inline">application.properties</code>, then checks the <code class="inline">GOOGLE_APPLICATION_CREDENTIALS</code> OS environment variable.</p>
+        </div>
+        <div class="info-box">
+          <h4>Step 2: Local <code class="inline">gcloud</code> ADC File</h4>
+          <p>Checks the well-known local file generated by <code class="inline">gcloud auth application-default login</code>:<br><code class="inline">%APPDATA%\gcloud\application_default_credentials.json</code> (Windows).</p>
+        </div>
+        <div class="info-box">
+          <h4>Step 3: GCP Metadata Server</h4>
+          <p>When deployed on Compute Engine, Cloud Run, or GKE, queries <code class="inline">http://metadata.google.internal</code> to borrow the attached Service Account token with zero key files!</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">XML — MAVEN BOM &amp; STARTER (2026)</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code>&lt;dependencyManagement&gt;
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.google.cloud&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-cloud-gcp-dependencies&lt;/artifactId&gt;
+            &lt;version&gt;8.2.3&lt;/version&gt;
+            &lt;type&gt;pom&lt;/type&gt;
+            &lt;scope&gt;import&lt;/scope&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;
+
+&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;com.google.cloud&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-cloud-gcp-starter-storage&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+        </div>
+
+        <div class="code-editor">
+          <div class="code-header">
+            <span class="code-lang">PROPERTIES — application.properties</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+          </div>
+          <pre><code># 1. Target Google Cloud Project ID
+spring.cloud.gcp.project-id=ivory-link-511508-u3
+
+# 2. Storage-specific project override (Optional)
+spring.cloud.gcp.storage.project-id=ivory-link-511508-u3
+
+# 3. Auto-create files/buckets via WritableResource (default: true)
+spring.cloud.gcp.storage.auto-create-files=true
+
+# 4. Explicit Service Account JSON Key (Leave commented out when using ADC!)
+# spring.cloud.gcp.storage.credentials.location=file:/opt/keys/sa-key.json
+
+# 5. Custom application property for bucket name
+app.gcs.bucket-name=soham-sg-test</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Complete Spring Boot Service: 5 Real-World Enterprise Use Cases</h3>
+      <p>Below is a production-ready Spring Boot <code class="inline">@Service</code> and <code class="inline">@RestController</code> demonstrating all five core patterns: (1) Spring <code class="inline">Resource</code> / <code class="inline">WritableResource</code> streaming, (2) Multipart file upload with custom metadata &amp; <code class="inline">Cache-Control</code>, (3) V4 Signed URLs for temporary private downloads, (4) Object version listing &amp; rollback, and (5) Safe conditional creation (<code class="inline">doesNotExist</code>):</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — GcsEnterpriseStorageService.java (5 USE CASES)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>package com.soham.cloud.storage;
+
+import com.google.cloud.storage.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.WritableResource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+@Service
+public class GcsEnterpriseStorageService {
+
+    private final Storage storage;
+
+    @Value("${app.gcs.bucket-name}")
+    private String bucketName;
+
+    // USE CASE 1: Direct gs:// Resource Injection
+    @Value("gs://${app.gcs.bucket-name}/sample-text.txt")
+    private Resource gcsBannerResource;
+
+    public GcsEnterpriseStorageService(Storage storage) {
+        this.storage = storage;
+    }
+
+    // --- USE CASE 1A: Read Cloud Object via Spring Resource Abstraction ---
+    public String readViaSpringResource() throws IOException {
+        try (InputStream is = gcsBannerResource.getInputStream()) {
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    // --- USE CASE 1B: Write Cloud Object via Spring WritableResource ---
+    public void writeViaSpringResource(String text) throws IOException {
+        WritableResource writable = (WritableResource) gcsBannerResource;
+        try (OutputStream os = writable.getOutputStream()) {
+            os.write(text.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    // --- USE CASE 2: Multipart Upload with Custom Metadata &amp; Cache-Control ---
+    public Map&lt;String, Object&gt; uploadMultipartWithMetadata(
+            MultipartFile file, String uploadedBy, String category) throws IOException {
+
+        BlobId blobId = BlobId.of(bucketName, file.getOriginalFilename());
+
+        Map&lt;String, String&gt; customMeta = new HashMap&lt;&gt;();
+        customMeta.put("uploadedBy", uploadedBy);
+        customMeta.put("category", category);
+        customMeta.put("moderationStatus", "pending");
+
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(file.getContentType())
+                .setCacheControl("public, max-age=3600") // Cache at CDN/Browser for 1 hour
+                .setMetadata(customMeta)
+                .build();
+
+        Blob created = storage.create(blobInfo, file.getBytes());
+        return Map.of(
+                "name", created.getName(),
+                "generation", created.getGeneration(),
+                "md5", created.getMd5ToHexString(),
+                "metadata", created.getMetadata()
+        );
+    }
+
+    // --- USE CASE 3: Generate V4 Signed URL for Temporary Private Access ---
+    public String generateSignedDownloadUrl(String objectName, int expiryMinutes) {
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectName)).build();
+        URL signedUrl = storage.signUrl(
+                blobInfo,
+                expiryMinutes,
+                TimeUnit.MINUTES,
+                Storage.SignUrlOption.withV4Signature()
+        );
+        return signedUrl.toString();
+    }
+
+    // --- USE CASE 4: Inspect All Object Versions (Live vs Noncurrent) &amp; Rollback ---
+    public List&lt;Map&lt;String, Object&gt;&gt; listObjectVersions(String objectName) {
+        List&lt;Map&lt;String, Object&gt;&gt; result = new ArrayList&lt;&gt;();
+        Iterable&lt;Blob&gt; blobs = storage.list(
+                bucketName,
+                Storage.BlobListOption.prefix(objectName),
+                Storage.BlobListOption.versions(true)
+        ).iterateAll();
+
+        for (Blob b : blobs) {
+            if (b.getName().equals(objectName)) {
+                boolean isCurrentLive = (b.getDeleteTimeOffsetDateTime() == null);
+                result.add(Map.of(
+                        "generation", b.getGeneration(),
+                        "status", isCurrentLive ? "CURRENT_LIVE" : "NONCURRENT_ARCHIVED",
+                        "sizeBytes", b.getSize(),
+                        "updatedAt", String.valueOf(b.getUpdateTimeOffsetDateTime())
+                ));
+            }
+        }
+        return result;
+    }
+
+    public void rollbackToGeneration(String objectName, long generationId) {
+        BlobId oldVersion = BlobId.of(bucketName, objectName, generationId);
+        BlobId liveTarget = BlobId.of(bucketName, objectName);
+        storage.copy(Storage.CopyRequest.newBuilder()
+                .setSource(oldVersion)
+                .setTarget(liveTarget)
+                .build());
+    }
+
+    // --- USE CASE 5: Safe Atomic Upload (Prevent Accidental Overwrite) ---
+    public void createOnlyIfAbsent(String objectName, String content) {
+        BlobInfo info = BlobInfo.newBuilder(bucketName, objectName).setContentType("text/plain").build();
+        // Throws StorageException (412 Precondition Failed) if object already exists!
+        storage.create(info, content.getBytes(StandardCharsets.UTF_8), Storage.BlobTargetOption.doesNotExist());
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 7: 50 CERTIFICATION Q&A BANK ==================== -->
+  <section id="tab-cert50" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 7: 50 Google Cloud Storage Certification Questions &amp; Accordion Solutions</h2>
+        <p>Spanning Architecture, Budget/FinOps, Operational Policies &amp; Security, Cloud Engineering, and Java/Spring Developers</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">50 Curated Questions</span>
+        <span class="badge">Easy / Medium / Tricky</span>
+        <span class="badge">Hidden by Default</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="certSearch" class="search-input" placeholder="🔍 Search 50 questions (e.g., 'early deletion', 'generation', 'IPv6', 'Autoclass', 'Signed URL', 'rm -r')..." oninput="filterCertQuestions()">
+        <select id="catFilter" class="filter-select" onchange="filterCertQuestions()">
+          <option value="ALL">All Categories (50)</option>
+          <option value="Architecture">Architecture &amp; Storage Classes (10)</option>
+          <option value="Budget">Budget, Billing &amp; FinOps (10)</option>
+          <option value="Security">Operational Policies &amp; Security (10)</option>
+          <option value="Engineering">Cloud Engineering &amp; CLI (10)</option>
+          <option value="Developer">Java &amp; Spring Boot Developers (10)</option>
+        </select>
+        <select id="diffFilter" class="filter-select" onchange="filterCertQuestions()">
+          <option value="ALL">All Difficulties</option>
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Tricky">Tricky (Architect Level)</option>
+        </select>
+        <button class="action-btn" onclick="toggleAllCert(true)">Expand Visible</button>
+        <button class="action-btn secondary" onclick="toggleAllCert(false)">Collapse All</button>
+      </div>
+
+      <div id="certCounter" style="font-size:0.84rem; font-weight:700; color:var(--text-secondary); margin-bottom:12px;">Showing 50 of 50 Questions</div>
+      <div id="certContainer" class="accordion-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<a href="mailto:sohamsironline@gmail.com?subject=GCS%20%26%20Spring%20Boot%20Certification%20Portal%20Query" class="fab">
+  ✉️ Ask Soham Sir
+</a>
+
+<footer>
+  Google Cloud Storage, Java SDK &amp; Spring Boot Masterclass Portal &bull; Prepared by <strong>Prof. Soham Sengupta</strong>
+</footer>
+
+<script>
+  // ==================== UI CONTROLS ====================
+  function openTab(evt, tabId) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const next = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    body.setAttribute('data-theme', next);
+    document.getElementById('themeIcon').textContent = next === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeText').textContent = next === 'dark' ? 'Light' : 'Dark';
+  }
+
+  function setAccent(color, el) {
+    document.body.setAttribute('data-accent', color);
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  let currentFontSize = 16;
+  function changeFontSize(delta) {
+    currentFontSize = Math.min(22, Math.max(13, currentFontSize + delta));
+    document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+  }
+
+  function changeFontFamily(fontVal) {
+    document.documentElement.style.setProperty('--font-main', fontVal);
+  }
+
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(e => alert(e.message));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function copyCode(btn) {
+    const text = btn.closest('.code-editor').querySelector('pre').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  // ==================== 50 CERTIFICATION QUESTIONS DATA ====================
+  const certQuestions = [
+    // --- CATEGORY 1: ARCHITECTURE & STORAGE CLASSES (1-10) ---
+    { id: 1, cat: "Architecture", diff: "Easy", q: "Why can't you install a Linux operating system or run a live relational MySQL database directly on a Google Cloud Storage bucket?", a: "Google Cloud Storage is an unstructured Object Storage system accessed over HTTP REST APIs with whole-object immutability. Operating systems and transactional databases require byte-level random block read/write access provided by Block Storage (such as Compute Engine Persistent Disks)." },
+    { id: 2, cat: "Architecture", diff: "Easy", q: "How does Google Cloud Storage represent folders inside a bucket?", a: "GCS uses a completely flat namespace rather than a hierarchical directory tree. Folders are simulated visually in the Console UI and CLI by treating '/' characters inside the object's string key (e.g., 'logs/2026/oct/app.log') as common prefixes." },
+    { id: 3, cat: "Architecture", diff: "Medium", q: "Does Archive Storage have a slower time-to-first-byte latency than Standard Storage in Google Cloud?", a: "No! Unlike AWS Glacier which can take minutes or hours to thaw archives, all Google Cloud Storage classes—including Archive—provide identical millisecond first-byte latency. Archive differs only in its lower monthly storage price, 365-day minimum duration, and higher per-GB retrieval fee." },
+    { id: 4, cat: "Architecture", diff: "Medium", q: "An AI/ML team runs GPU training jobs in 'us-central1-a' and needs maximum read throughput with minimal network egress cost. Which bucket location type should they select?", a: "A Regional bucket in 'us-central1' (or a Zonal Rapid Storage bucket / Rapid Cache in 'us-central1-a'). Co-locating a Regional bucket in the exact same region as the Compute Engine / GKE cluster provides the lowest latency and zero inter-region replication or network egress charges." },
+    { id: 5, cat: "Architecture", diff: "Tricky", q: "What is the difference between a Dual-Region bucket with 'Standard Replication' vs. 'Turbo Replication'?", a: "A Dual-Region bucket replicates data across a specific pair of regions. Standard async replication typically replicates quickly but has no contractual RPO SLA. Enabling Turbo Replication guarantees a Recovery Point Objective (RPO) of 15 minutes (100% of objects replicated within 15 minutes) for strict disaster recovery compliance." },
+    { id: 6, cat: "Architecture", diff: "Medium", q: "What consistency model does Google Cloud Storage guarantee when an existing object is overwritten or deleted?", a: "GCS provides strong global read-after-write consistency for all object creation, overwrite, metadata update, and deletion operations, as well as bucket and object listing. The moment an overwrite succeeds, all global readers immediately receive the new version (unless an intermediate CDN or browser cached the old response)." },
+    { id: 7, cat: "Architecture", diff: "Tricky", q: "What happens if 5,000 IoT devices simultaneously overwrite the exact same single object ('gs://iot-bucket/status.json') every second?", a: "You will encounter HTTP 429 (Too Many Requests) or 503 rate-limiting errors! While a GCS bucket scales to tens of thousands of writes per second across *different* objects, the maximum mutation rate for the *exact same object name* is limited to once per second. Each IoT device should write to a unique object key." },
+    { id: 8, cat: "Architecture", diff: "Easy", q: "What is the maximum file size of a single object stored in Google Cloud Storage?", a: "A single object in Google Cloud Storage can be up to 5 TiB (Terabytes) in size, while a bucket can hold an unlimited total number of objects." },
+    { id: 9, cat: "Architecture", diff: "Medium", q: "In cloud migration taxonomy, which mobility patterns apply when uploading local server backups to GCS and later downloading them to a local recovery disk?", a: "Uploading local disk snapshots to GCS is D2C (Disk-to-Cloud), and pulling cloud-stored archives back down to local storage arrays is C2D (Cloud-to-Disk)." },
+    { id: 10, cat: "Architecture", diff: "Tricky", q: "Can you change a bucket's geographic Location (e.g., from 'us-central1' to 'europe-west1') after the bucket has been created?", a: "No. A bucket's name and geographic location are permanently immutable once created. To move data to a new region, you must create a new bucket in the target region and copy the objects over using 'gcloud storage cp' or Storage Transfer Service." },
+
+    // --- CATEGORY 2: BUDGET, BILLING & FINOPS (11-20) ---
+    { id: 11, cat: "Budget", diff: "Easy", q: "What is included in the Google Cloud 'Always Free' tier for Cloud Storage?", a: "5 GB-months of Regional Standard storage per month (restricted to US regions: us-central1, us-east1, or us-west1), plus 5,000 Class A operations and 50,000 Class B operations per month." },
+    { id: 12, cat: "Budget", diff: "Medium", q: "You upload a 100 GB backup file to a Coldline bucket and delete it after 20 days. How are you billed?", a: "Coldline has a 90-day minimum storage duration. You are billed for storing 100 GB for the 20 active days PLUS an early deletion charge equivalent to storing 100 GB for the remaining 70 days." },
+    { id: 13, cat: "Budget", diff: "Tricky", q: "You enable Object Versioning on a Standard bucket, upload a 10 GB file into Coldline class, and overwrite it 5 days later. Why does your bill jump?", a: "Overwriting a versioned object turns the original 10 GB Coldline object into a noncurrent version (which continues billing indefinitely until deleted!). If a Lifecycle Rule then deletes that noncurrent version before 90 days have elapsed since creation, it also triggers the Coldline early deletion charge." },
+    { id: 14, cat: "Budget", diff: "Medium", q: "What is the difference between Class A, Class B, and Free operations in GCS billing?", a: "Class A operations (most expensive per 1,000 requests) involve mutations and listings (storage.objects.create, list, bucket updates). Class B operations (cheaper) involve single-object reads and metadata lookups (storage.objects.get). Deleting an object is a FREE operation (unless early deletion duration rules apply)." },
+    { id: 15, cat: "Budget", diff: "Tricky", q: "How does enabling 'Autoclass' on a bucket differ financially from writing manual Lifecycle Management rules to transition objects to Nearline/Coldline/Archive?", a: "With Autoclass, GCS automatically transitions unaccessed objects down to Nearline, Coldline, and Archive based on last-access timestamps, and automatically promotes an object back to Standard when read—with ZERO early deletion fees and ZERO per-GB retrieval fees, in exchange for a small monthly management fee per 1,000 objects." },
+    { id: 16, cat: "Budget", diff: "Medium", q: "A university hosts a public 50 TB genomic dataset in GCS and wants external researchers in other GCP projects to pay for the download bandwidth and Class A/B operations. Which feature solves this?", a: "Enable 'Requester Pays' on the bucket. Authenticated callers must pass their own billing project ID (e.g., '--billing-project=researcher-proj') and are billed directly for all data access and egress costs." },
+    { id: 17, cat: "Budget", diff: "Easy", q: "How does setting 'Cache-Control: public, max-age=86400' on public website images reduce your monthly GCP bill?", a: "It instructs browsers and intermediate CDNs to cache the object for 24 hours (86,400 seconds). Repeated page views serve the cached copy locally instead of hitting your GCS bucket, eliminating repeated Class B read operations and internet egress bandwidth charges." },
+    { id: 18, cat: "Budget", diff: "Medium", q: "You enable Object Versioning on a bucket receiving 500 GB of daily automated overwrites. How do you prevent infinite storage cost accumulation?", a: "Configure an Object Lifecycle Management rule with the 'Delete' action and two conditions: 'isLive: false' (targets only noncurrent versions) and 'daysSinceNoncurrentTime: 30' (or 'numNewerVersions: 3')." },
+    { id: 19, cat: "Budget", diff: "Tricky", q: "Does Google Cloud charge network egress fees when a Compute Engine VM in 'us-central1-a' downloads an object from a Regional GCS bucket in 'us-central1'?", a: "No. Data transfer from a Regional or Dual-Region GCS bucket to a Compute Engine VM located in the exact same region (using internal Google IPs / Private Google Access) is completely free." },
+    { id: 20, cat: "Budget", diff: "Easy", q: "What is the first financial safety guardrail every beginner or architect should configure before testing GCS or Compute Engine?", a: "Create a Budget Alert under Billing -> Budgets & Alerts (set to $0.00 or $1.00) with email notifications at 50%, 90%, and 100% of actual and forecasted spend." },
+
+    // --- CATEGORY 3: OPERATIONAL POLICIES & SECURITY (21-30) ---
+    { id: 21, cat: "Security", diff: "Tricky", q: "Why did applying the IPv4 CIDR '0.0.0.0/0' to a bucket's IP Filter lock you out from both your broadband ISP and mobile hotspot?", a: "Because '0.0.0.0/0' only permits IPv4 traffic! Modern broadband ISPs and cellular hotspots route connections to Google APIs over IPv6 by default. Because '::/0' (IPv6) was omitted from 'allowedIpCidrRanges', GCS rejected every request coming from your IPv6 address." },
+    { id: 22, cat: "Security", diff: "Tricky", q: "If you are locked out of a bucket by an IP Filter and '--clear-ip-filter' fails with Access Denied, what is the exact IAM break-glass procedure?", a: "Create a custom IAM role at the Project level containing the permission 'storage.buckets.exemptFromIpFilter', bind that role to your user principal via 'gcloud projects add-iam-policy-binding', wait ~2 minutes for IAM propagation, and then execute 'gcloud storage buckets update gs://BUCKET --clear-ip-filter'." },
+    { id: 23, cat: "Security", diff: "Medium", q: "What is the difference between Uniform Bucket-Level Access (UBLA) and Fine-Grained Access Control?", a: "Uniform Bucket-Level Access disables per-object Access Control Lists (ACLs) and manages all access strictly through Cloud IAM policies at the bucket level (or Managed Folder level). Fine-Grained Access allows legacy per-object ACLs alongside IAM, which increases administrative complexity and audit risk." },
+    { id: 24, cat: "Security", diff: "Tricky", q: "If you enable Uniform Bucket-Level Access (UBLA) on a bucket and keep it enabled for 90 consecutive days, can you switch back to Fine-Grained ACLs?", a: "No! Once Uniform Bucket-Level Access has been active continuously for 90 days, the setting becomes permanent and irreversible on that bucket." },
+    { id: 25, cat: "Security", diff: "Medium", q: "How do you prevent any engineer in your company from accidentally making a bucket public via 'allUsers' or 'allAuthenticatedUsers'?", a: "Enable 'Public Access Prevention' (enforced either on the specific bucket or globally across the entire company via the 'storage.publicAccessPrevention' Organization Policy constraint)." },
+    { id: 26, cat: "Security", diff: "Medium", q: "What is the difference between Soft Delete, Object Versioning, and Bucket Lock (Retention Policy)?", a: "Soft Delete retains deleted/overwritten objects in a hidden recovery bin for a short window (default 7 days, max 90 days) to guard against accidental deletion. Object Versioning keeps historical generations indefinitely as noncurrent objects. Bucket Lock enforces WORM (Write Once, Read Many) compliance, preventing anyone—even Project Owners—from deleting an object until its retention period expires." },
+    { id: 27, cat: "Security", diff: "Tricky", q: "What happens if an administrator clicks 'Lock Retention Policy' on a bucket with a 7-year retention period, and later realizes the test bucket has 100 TB of dummy data?", a: "Locking a Retention Policy (Bucket Lock) is 100% irreversible! Nobody—not even Google Cloud Support or the Project Owner—can shorten the retention period or delete those 100 TB objects until 7 years have passed, except by deleting the entire Google Cloud billing account/project under strict verification." },
+    { id: 28, cat: "Security", diff: "Easy", q: "Compare Google-Managed Encryption Keys (GMEK), Customer-Managed Encryption Keys (CMEK), and Customer-Supplied Encryption Keys (CSEK).", a: "GMEK (default) encrypts all GCS data at rest automatically with keys managed by Google. CMEK uses keys you create and rotate inside Google Cloud KMS. CSEK requires you to pass your own raw AES-256 key in the HTTP headers of every read/write request (Google never stores the key on disk)." },
+    { id: 29, cat: "Security", diff: "Medium", q: "Why is assigning the 'Owner' role (roles/owner) to a Service Account considered a severe security anti-pattern?", a: "A Service Account is a machine identity, while Owner is a primitive role granting full project control. If a developer leaks a Service Account JSON key with 'roles/owner', attackers can destroy all project infrastructure and modify IAM policies. Always grant least-privilege roles like 'roles/storage.objectUser' or 'roles/storage.objectViewer'." },
+    { id: 30, cat: "Security", diff: "Medium", q: "What is the difference between granting 'allUsers' vs 'allAuthenticatedUsers' the Storage Object Viewer role on a bucket?", a: "'allUsers' allows anyone on the anonymous internet to read objects. 'allAuthenticatedUsers' allows *any person in the world who is signed into any personal Gmail or Google Workspace account* to read objects—so both effectively make your bucket public!" },
+
+    // --- CATEGORY 4: CLOUD ENGINEERING & GCLOUD CLI (31-40) ---
+    { id: 31, cat: "Engineering", diff: "Easy", q: "Why should cloud engineers use 'gcloud storage' instead of the legacy 'gsutil' tool?", a: "'gcloud storage' is the modern CLI engine built into the Google Cloud SDK. It uses parallel multi-threading and dynamic slicing by default, transferring large batches of files significantly faster than legacy 'gsutil' while sharing unified 'gcloud' flags (--format, --filter)." },
+    { id: 32, cat: "Engineering", diff: "Medium", q: "Why does 'gcloud storage buckets delete gs://my-bucket' fail when there is a single file inside the bucket, and which command deletes a non-empty bucket in one step?", a: "'gcloud storage buckets delete' is a safe control-plane command that refuses to delete non-empty buckets. To delete all objects, versions, and the bucket itself in one command, run: 'gcloud storage rm --recursive gs://my-bucket' (or '-r')." },
+    { id: 33, cat: "Engineering", diff: "Medium", q: "In the output of 'gcloud storage objects describe gs://soham-sg-test/sample-text.txt', what is the difference between 'generation' and 'metageneration'?", a: "'generation' is a 16-digit timestamp ID that changes only when the object's binary data payload is created or overwritten. 'metageneration' starts at 1 and increments (2, 3...) whenever you modify the object's metadata or ACLs without changing the file content." },
+    { id: 34, cat: "Engineering", diff: "Tricky", q: "When inspecting 'gcloud storage objects describe gs://bucket/file.txt', how can you tell if it is the current live version when there is no field explicitly labeled 'is_current'?", a: "By checking for the 'time_deleted' field! A noncurrent version always includes a 'time_deleted' timestamp indicating when it was superseded. Furthermore, calling 'describe' without a '#generation' suffix automatically returns the live version." },
+    { id: 35, cat: "Engineering", diff: "Easy", q: "What purpose do the 'md5_hash' and 'crc32c_hash' fields serve in 'gcloud storage objects describe'?", a: "They are Base64-encoded cryptographic/cyclic redundancy checksums calculated by Google Cloud. Both 'gcloud storage cp' and the Java SDK verify these hashes upon upload and download to guarantee 100% end-to-end data integrity over the network." },
+    { id: 36, cat: "Engineering", diff: "Medium", q: "Which CLI command lists every historical noncurrent generation of an object alongside the live version?", a: "Run 'gcloud storage ls --all-versions gs://BUCKET/OBJECT' (or the shorthand 'gcloud storage ls -a gs://BUCKET/OBJECT')." },
+    { id: 37, cat: "Engineering", diff: "Medium", q: "How do you restore a noncurrent object version 'gs://my-bucket/report.pdf#1792501647883130' using the gcloud CLI?", a: "Copy the versioned URI back to the base unversioned URI: 'gcloud storage cp gs://my-bucket/report.pdf#1792501647883130 gs://my-bucket/report.pdf'. This creates a brand-new live generation containing the restored content." },
+    { id: 38, cat: "Engineering", diff: "Easy", q: "How can you inspect the text contents of a 10 KB configuration file inside a bucket from your terminal without downloading it to disk?", a: "Use the 'cat' subcommand: 'gcloud storage cat gs://my-bucket/config.yaml'." },
+    { id: 39, cat: "Engineering", diff: "Tricky", q: "You want to synchronize a local directory './build-assets' with 'gs://my-bucket/assets' so only modified files are uploaded and deleted local files are removed from the bucket. Which command do you use?", a: "Use 'gcloud storage rsync --recursive --delete-unmatched-destination-objects ./build-assets gs://my-bucket/assets'." },
+    { id: 40, cat: "Engineering", diff: "Medium", q: "When using the raw GCS JSON REST API, what is the difference between calling 'GET /storage/v1/b/BUCKET/o/OBJECT' with and without '?alt=media'?", a: "Without '?alt=media', GCS returns a JSON document containing the object's metadata (generation, size, hashes, contentType). Appending '?alt=media' instructs GCS to stream the actual binary file content in the HTTP response body." },
+
+    // --- CATEGORY 5: JAVA SDK & SPRING BOOT DEVELOPERS (41-50) ---
+    { id: 41, cat: "Developer", diff: "Easy", q: "In the Google Cloud Storage Java SDK, what is the difference between 'BlobId' and 'BlobInfo'?", a: "'BlobId' is the immutable composite identifier (bucket name + object name + optional generation number) used to locate an object. 'BlobInfo' wraps 'BlobId' and adds mutable metadata attributes such as Content-Type, Cache-Control, StorageClass, and custom metadata maps." },
+    { id: 42, cat: "Developer", diff: "Medium", q: "How does 'StorageOptions.getDefaultInstance().getService()' authenticate your Java or Spring Boot app locally without a hardcoded JSON key?", a: "It executes the Application Default Credentials (ADC) discovery chain: checking 'GOOGLE_APPLICATION_CREDENTIALS' first, then reading '%APPDATA%\\gcloud\\application_default_credentials.json' (created by 'gcloud auth application-default login'), and finally falling back to the GCP Metadata Server when deployed in the cloud." },
+    { id: 43, cat: "Developer", diff: "Medium", q: "When iterating over 'storage.list(bucket, BlobListOption.versions(true)).iterateAll()' in Java, how do you programmatically identify which 'Blob' is the current live version?", a: "Check 'if (blob.getDeleteTimeOffsetDateTime() == null)' (or 'blob.getDeleteTime() == null'). Only the current live version has a null deletion timestamp; all archived noncurrent versions have a non-null deletion timestamp." },
+    { id: 44, cat: "Developer", diff: "Tricky", q: "Two Spring Boot microservices concurrently read 'counter.json', increment a value, and write it back to GCS. How do you prevent a Lost Update race condition using the Java SDK?", a: "Read the object's current generation number ('long gen = blob.getGeneration()') and pass 'Storage.BlobTargetOption.generationMatch(gen)' when calling 'storage.create(...)'. If the other microservice modified the file first, the generation will no longer match and GCS will atomically reject the stale write with HTTP 412 (Precondition Failed)." },
+    { id: 45, cat: "Developer", diff: "Easy", q: "In Spring Boot, how do you inject a GCS file directly into a bean field without writing any Java SDK boilerplate?", a: "Add 'spring-cloud-gcp-starter-storage' to your pom.xml and use the '@Value(\"gs://my-bucket/file.txt\") private Resource gcsFile;' annotation. Spring Cloud GCP automatically resolves the 'gs://' protocol." },
+    { id: 46, cat: "Developer", diff: "Medium", q: "How do you write data to a GCS object using Spring's 'Resource' abstraction, and when should you switch to the native 'Storage' bean instead?", a: "Cast the injected 'Resource' to 'WritableResource' and write bytes to 'writableResource.getOutputStream()'. Switch to the auto-wired native 'Storage' bean whenever you need to set custom metadata, 'Content-Type', 'Cache-Control', signed URLs, or generation preconditions." },
+    { id: 47, cat: "Developer", diff: "Tricky", q: "A Spring Boot app calls 'storage.signUrl(blobInfo, 15, TimeUnit.MINUTES, SignUrlOption.withV4Signature())' locally and throws 'Signing key was not provided and could not be derived'. Why?", a: "Generating a V4 Signed URL requires cryptographic signing via a Service Account private key or IAM 'signBlob' API. Local user credentials generated by 'gcloud auth application-default login' do not contain a Service Account private key unless you use Service Account impersonation ('--impersonate-service-account') or supply a Service Account credential." },
+    { id: 48, cat: "Developer", diff: "Medium", q: "How do you upload a 2 GB video file from a Java application without loading the entire 2 GB byte array into JVM Heap memory (which would cause an OutOfMemoryError)?", a: "Use 'try (WriteChannel writer = storage.writer(blobInfo))' instead of 'storage.create(blobInfo, byte[])'. 'WriteChannel' implements 'java.nio.channels.WritableByteChannel', allowing you to stream chunks via a small 64 KB ByteBuffer over a resumable upload session." },
+    { id: 49, cat: "Developer", diff: "Easy", q: "Which 'application.properties' keys configure the project ID and explicit Service Account key path for GCS in Spring Boot?", a: "'spring.cloud.gcp.storage.project-id' (or global 'spring.cloud.gcp.project-id') sets the project, and 'spring.cloud.gcp.storage.credentials.location=file:/path/to/key.json' specifies an explicit key file." },
+    { id: 50, cat: "Developer", diff: "Tricky", q: "You update an existing object's custom metadata in Java using 'blob.toBuilder().setMetadata(Map.of(\"key\", \"newVal\")).build().update()'. What happens to existing custom metadata keys that were not included in the new Map?", a: "Any custom metadata key that is omitted saves only what is in the map if replaced, or to delete a specific existing custom metadata key via 'update()', you must explicitly pass that key in the Map with a 'null' value (e.g., 'map.put(\"oldKey\", null)')." }
+  ];
+
+  function renderCertQuestions() {
+    const container = document.getElementById('certContainer');
+    container.innerHTML = certQuestions.map(item => `
+      <div class="accordion-item cert-item"
+           data-cat="${item.cat}"
+           data-diff="${item.diff}"
+           data-text="${(item.q + ' ' + item.a + ' ' + item.cat + ' ' + item.diff).toLowerCase()}">
+        <button class="accordion-btn" onclick="this.parentElement.classList.toggle('active')">
+          <span>
+            <span class="q-num">Q${item.id}</span>
+            <span class="cat-tag">${item.cat}</span>
+            <span class="diff-tag diff-${item.diff}">${item.diff}</span>
+            ${item.q}
+          </span>
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-panel">
+          <strong>Certification Answer:</strong> ${item.a}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterCertQuestions() {
+    const query = document.getElementById('certSearch').value.toLowerCase();
+    const cat = document.getElementById('catFilter').value;
+    const diff = document.getElementById('diffFilter').value;
+    let visibleCount = 0;
+
+    document.querySelectorAll('#certContainer .cert-item').forEach(el => {
+      const matchText = el.getAttribute('data-text').includes(query);
+      const matchCat = (cat === 'ALL' || el.getAttribute('data-cat') === cat);
+      const matchDiff = (diff === 'ALL' || el.getAttribute('data-diff') === diff);
+      const show = matchText && matchCat && matchDiff;
+      el.style.display = show ? 'block' : 'none';
+      if (show) visibleCount++;
+    });
+
+    document.getElementById('certCounter').textContent = `Showing ${visibleCount} of ${certQuestions.length} Questions`;
+  }
+
+  function toggleAllCert(expand) {
+    document.querySelectorAll('#certContainer .cert-item').forEach(el => {
+      if (el.style.display !== 'none') {
+        el.classList.toggle('active', expand);
+      }
+    });
+  }
+
+  // Initialize 50 Certification Questions on load
+  renderCertQuestions();
+</script>
+
+</body>
+</html>
