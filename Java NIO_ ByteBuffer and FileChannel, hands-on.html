@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Java NIO: ByteBuffer and FileChannel, hands-on</title>
+<style>
+:root{--bg:#f2f4f7;--surf:#fff;--surf2:#e6ebf1;--ink:#16202c;--mut:#566577;--line:#d3dae3;--gold:#8f6200;--goldbg:#fbeec8;--ok:#1b7a4b;--bad:#b3392f;--cbg:#0e1824;--cink:#e8eef6;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1520;--surf:#142030;--surf2:#1c2b3e;--ink:#e7edf4;--mut:#94a4b6;--line:#26364a;--gold:#f0b429;--goldbg:#3b2f0d;--ok:#4fd08d;--bad:#ff8a7d;--cbg:#09111b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1520;--surf:#142030;--surf2:#1c2b3e;--ink:#e7edf4;--mut:#94a4b6;--line:#26364a;--gold:#f0b429;--goldbg:#3b2f0d;--ok:#4fd08d;--bad:#ff8a7d;--cbg:#09111b;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 "Iowan Old Style",Georgia,"Times New Roman",serif}
+main{max-width:980px;margin:0 auto;padding:28px 18px 60px}
+h1{font:700 clamp(30px,5vw,46px)/1.1 Georgia,serif;margin:6px 0 10px;letter-spacing:-.02em}
+h2{font:700 26px/1.2 Georgia,serif;margin:56px 0 8px}
+h3{font:600 18px/1.3 system-ui,sans-serif;margin:0 0 6px}
+p{max-width:70ch;margin:8px 0}
+.lede{color:var(--mut);font-size:19px;max-width:60ch}
+code,pre{font:14px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+p code{background:var(--surf2);padding:1px 5px;border-radius:4px}
+pre{background:var(--cbg);color:var(--cink);padding:14px 16px;border-radius:8px;overflow-x:auto;margin:8px 0;white-space:pre}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.cols{grid-template-columns:1fr}}
+.lab{font:600 13px system-ui,sans-serif;margin-top:10px;display:flex;gap:8px;align-items:center}
+.tag{padding:2px 9px;border-radius:99px;font:600 12px system-ui,sans-serif}
+.t-no{background:var(--surf2);color:var(--bad)}.t-yes{background:var(--goldbg);color:var(--gold)}
+.note{font:14px/1.5 system-ui,sans-serif;color:var(--mut);margin:4px 0}
+button{font:600 14px system-ui,sans-serif;background:var(--surf);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--gold)}button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.on{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:16px}
+.grid,.marks{display:grid;grid-template-columns:repeat(16,1fr) .5fr;gap:4px}
+.cell{height:50px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 17px ui-monospace,Menlo,monospace;border:2px solid var(--line);background:var(--surf2)}
+.cell.live{border-color:var(--gold);background:var(--goldbg);color:var(--ink)}
+.cell.beyond{opacity:.35;border-style:dashed}
+.cell.hit{outline:3px solid var(--ok)}
+.marks div{font:700 12px system-ui,sans-serif;text-align:center;min-height:30px;color:var(--gold)}
+.stat{display:flex;gap:22px;flex-wrap:wrap;font:600 15px ui-monospace,Menlo,monospace;margin:10px 0}
+.msg{font:15px/1.5 system-ui,sans-serif;min-height:46px;padding:10px 12px;border-radius:8px;background:var(--surf2)}
+.msg.err{color:var(--bad)}
+.call{margin:10px 0 0}
+details{background:var(--surf);border:1px solid var(--line);border-radius:12px;margin:12px 0;padding:4px 16px}
+summary{cursor:pointer;font:600 17px system-ui,sans-serif;padding:12px 0}
+.q{margin:18px 0}.q .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.q .fb{font:14px system-ui,sans-serif;margin-top:6px;min-height:20px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><span class="note">Java NIO tutorial</span><button id="theme" aria-label="Toggle light and dark theme">Theme</button></div>
+<h1>ByteBuffer and FileChannel: what problem do they solve?</h1>
+<p class="lede">Classic <code>java.io</code> streams give you one-way, front-to-back byte pipes. NIO gives you a typed in-memory block you control (<code>ByteBuffer</code>) and a file handle that can seek, lock, map and transfer (<code>FileChannel</code>). Play with the buffer first, then compare code, then see where streams simply cannot do the job.</p>
+
+<h2>1. ByteBuffer: a block with a cursor</h2>
+<p>A buffer has three numbers. <b>capacity</b> is the fixed size. <b>position</b> is the next index to read or write. <b>limit</b> is the first index you must not touch. Every bug people hit with ByteBuffer is a mistake about these two moving numbers. Click through a full write-then-read cycle.</p>
+<div class="panel">
+ <div class="bar" id="acts"></div>
+ <div class="grid" id="cells" aria-live="polite"></div>
+ <div class="marks" id="marks"></div>
+ <div class="stat"><span id="sp"></span><span id="sl"></span><span id="sr"></span></div>
+ <div class="msg" id="msg"></div>
+ <pre class="call" id="call"></pre>
+</div>
+<p class="note">Gold cells are the live window (position up to limit). Solid grey cells sit behind position. Dashed cells are beyond the limit. Try <b>get 1 byte</b> right after writing, without flip, and watch what you read.</p>
+
+<h2>2. Same task, without and with channels</h2>
+<div class="bar" id="taskbar"></div>
+<p id="problem"></p>
+<div class="cols">
+ <div><div class="lab"><span class="tag t-no">Streams</span><span id="wt"></span></div><pre id="wc"></pre><p class="note" id="wn"></p></div>
+ <div><div class="lab"><span class="tag t-yes">Channels</span><span id="yt"></span></div><pre id="yc"></pre><p class="note" id="yn"></p></div>
+</div>
+
+<h2>3. Where channels are not optional</h2>
+<p>Everything above can be argued as style or speed. These four cannot be done properly with <code>InputStream</code> and <code>OutputStream</code>. Open each one.</p>
+<div id="must"></div>
+
+<h2>4. Check yourself</h2>
+<div id="quiz"></div>
+<p class="note">Honest rule of thumb: for a plain whole-file copy, <code>Files.copy(src, dst)</code> is the simplest call. Reach for <code>FileChannel</code> when you need offsets, locks, mappings, transfers or control over buffers.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+$('theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark'};
+
+/* ---- ByteBuffer lab ---- */
+const CAP=16;let s;
+function reset(){s={a:Array(CAP).fill(null),p:0,l:CAP,hit:-1,err:false,msg:'A fresh buffer: position 0, limit equals capacity. It is in write mode.',call:'ByteBuffer buf = ByteBuffer.allocate(16);'}}
+function put(t){const n=t.length;s.hit=-1;if(s.l-s.p<n){s.err=true;s.msg='Only '+(s.l-s.p)+' byte(s) remain before the limit, but you tried to put '+n+'.';s.call='buf.put(...);  // throws BufferOverflowException';return}
+ s.err=false;for(const c of t)s.a[s.p++]=c;s.msg='put wrote '+n+' byte(s) and advanced position to '+s.p+'.';s.call='buf.put("'+t+'".getBytes());'}
+const A={
+ 'put “Java”':()=>put('Java'),'put “NIO!”':()=>put('NIO!'),
+ 'get 1 byte':()=>{s.err=false;if(s.p>=s.l){s.err=true;s.hit=-1;s.msg='Position has reached the limit, so nothing is left to read.';s.call='buf.get();  // throws BufferUnderflowException';return}
+  s.hit=s.p;const c=s.a[s.p++];s.msg='get returned '+(c===null?'0 (an empty byte)':'“'+c+'”')+' and advanced position to '+s.p+'.'+(c===null?' You read garbage because you never flipped.':'');s.call='byte b = buf.get();'},
+ 'flip':()=>{s.err=false;s.hit=-1;s.l=s.p;s.p=0;s.msg='flip: limit becomes the old position ('+s.l+'), position returns to 0. Written data is now readable. Switch from write mode to read mode.';s.call='buf.flip();'},
+ 'rewind':()=>{s.err=false;s.hit=-1;s.p=0;s.msg='rewind: position back to 0, limit untouched. Read the same data again.';s.call='buf.rewind();'},
+ 'compact':()=>{s.err=false;s.hit=-1;const r=s.l-s.p;for(let i=0;i<r;i++)s.a[i]=s.a[s.p+i];s.p=r;s.l=CAP;s.msg='compact: '+r+' unread byte(s) moved to the front, position set to '+r+', limit back to capacity. Use it for partial reads from a socket or file, then keep writing.';s.call='buf.compact();'},
+ 'clear':()=>{s.err=false;s.hit=-1;s.p=0;s.l=CAP;s.msg='clear: position 0, limit equals capacity. The bytes are NOT erased, they are just ignored until overwritten.';s.call='buf.clear();'},
+ 'start over':()=>reset()};
+for(const k in A){const b=document.createElement('button');b.textContent=k;b.onclick=()=>{A[k]();draw()};$('acts').append(b)}
+function draw(){let c='',m='';for(let i=0;i<CAP;i++){const cls=i>=s.l?'beyond':i>=s.p?'live':'';c+='<div class="cell '+cls+(i===s.hit?' hit':'')+'">'+(s.a[i]??'·')+'</div>'}
+ for(let i=0;i<=CAP;i++){m+='<div>'+(i===s.p&&i===s.l?'pos<br>lim':i===s.p?'pos':i===s.l?'lim':'')+'</div>'}
+ $('cells').innerHTML=c+'<div></div>';$('marks').innerHTML=m;
+ $('sp').textContent='position='+s.p;$('sl').textContent='limit='+s.l;$('sr').textContent='remaining='+(s.l-s.p);
+ $('msg').textContent=s.msg;$('msg').className='msg'+(s.err?' err':'');$('call').textContent=s.call}
+reset();draw();
+
+/* ---- Side by side tasks ---- */
+const tasks=[
+{n:'Copy a big file',p:'Problem: copy a 4 GB export. With streams every byte travels kernel to JVM heap array to kernel again. A channel can ask the operating system to move the bytes directly.',
+ wt:'works, but copies through the heap',w:`try (InputStream in = new FileInputStream(src);
+     OutputStream out = new FileOutputStream(dst)) {
+    byte[] buf = new byte[8192];
+    int n;
+    while ((n = in.read(buf)) != -1) {
+        out.write(buf, 0, n);
+    }
+}`,wn:'Fine for small files. For huge files you pay CPU and memory bandwidth for copies nobody needed.',
+ yt:'kernel-assisted transfer',y:`try (FileChannel in  = FileChannel.open(src, READ);
+     FileChannel out = FileChannel.open(dst, CREATE, WRITE, TRUNCATE_EXISTING)) {
+    long pos = 0, size = in.size();
+    while (pos < size) {
+        pos += in.transferTo(pos, size - pos, out);
+    }
+}`,yn:'transferTo may move fewer bytes than asked, so you loop. On supported systems no user-space copy happens. (READ and CREATE are static imports from StandardOpenOption.)'},
+{n:'Read record #3 at an offset',p:'Problem: a binary file holds fixed 64-byte records. You need record 3 only, and you want typed fields (int, long) without hand-shifting bytes.',
+ wt:'sequential skip, manual decoding',w:`try (InputStream in = new FileInputStream(path)) {
+    in.skipNBytes(2L * 64);          // walk past records 1 and 2
+    byte[] rec = in.readNBytes(64);
+    int id = ((rec[0] & 0xFF) << 24) | ((rec[1] & 0xFF) << 16)
+           | ((rec[2] & 0xFF) << 8)  |  (rec[3] & 0xFF);
+    // ...and the long balance is eight more shifts
+}`,wn:'The stream only moves forward. Going back means reopening. Decoding is manual, error prone and fixed to one byte order.',
+ yt:'jump straight there, typed reads',y:`try (FileChannel ch = FileChannel.open(path, READ)) {
+    ByteBuffer buf = ByteBuffer.allocate(64);
+    while (buf.hasRemaining()) {
+        if (ch.read(buf, 2L * 64) < 0) break;   // positional read
+    }
+    buf.flip();
+    int  id      = buf.getInt();
+    long balance = buf.getLong();
+}`,yn:'The positional read does not disturb the channel’s own position, and ByteBuffer decodes typed values. Choose a byte order with buf.order(ByteOrder.LITTLE_ENDIAN).'}];
+tasks.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t.n;b.onclick=()=>show(i);$('taskbar').append(b)});
+function show(i){const t=tasks[i];[...$('taskbar').children].forEach((b,j)=>b.classList.toggle('on',i===j));
+ $('problem').textContent=t.p;$('wt').textContent=t.wt;$('yt').textContent=t.yt;$('wc').textContent=t.w;$('yc').textContent=t.y;$('wn').textContent=t.wn;$('yn').textContent=t.yn}
+show(0);
+
+/* ---- Must-use scenarios ---- */
+const must=[
+{t:'Two processes append to one file: FileLock',why:'Streams have no locking API at all. Two programs writing the same ledger will interleave and corrupt records, and there is no stream-based fix.',
+ w:`// Process A and process B both run this. Nothing stops them overlapping.
+try (FileOutputStream out = new FileOutputStream("ledger.dat", true)) {
+    out.write(record);
+}`,y:`try (FileChannel ch = FileChannel.open(Path.of("ledger.dat"), CREATE, WRITE, APPEND);
+     FileLock lock = ch.lock()) {        // waits for an exclusive lock
+    ch.write(ByteBuffer.wrap(record));
+    ch.force(true);                      // flush to disk before releasing
+}`,n:'Locks are held for the whole JVM; locking the same region twice in one JVM throws OverlappingFileLockException. On some systems they are advisory, so every writer must cooperate. Use tryLock() to avoid blocking.'},
+{t:'A 3 GB index with random lookups: memory mapping',why:'Reading it all into a byte array fails: arrays are capped near 2 GB and the heap would explode. Seek-and-read per lookup costs a system call and a copy every time. Only FileChannel.map gives you a ByteBuffer backed by the file.',
+ w:`byte[] all = Files.readAllBytes(path);   // OutOfMemoryError, or an array-size error
+int v = ByteBuffer.wrap(all).getInt(offset);`,y:`try (FileChannel ch = FileChannel.open(path, READ)) {
+    MappedByteBuffer map = ch.map(FileChannel.MapMode.READ_ONLY, 0, 1L << 30);
+    int v = map.getInt(offset);          // page loaded by the OS on demand
+}`,n:'One mapping is limited to Integer.MAX_VALUE bytes, so map a large file in windows. Newer Java versions offer map(mode, offset, size, Arena) returning a MemorySegment, the modern route for big mappings.'},
+{t:'Many threads reading one file: positional reads',why:'RandomAccessFile has seek(), but the file pointer is shared. Thread B can move it between thread A’s seek and read, so A silently reads the wrong page.',
+ w:`// shared RandomAccessFile raf
+// Thread A:  raf.seek(0);     raf.read(bufA);   // may run after B’s seek
+// Thread B:  raf.seek(4096);  raf.read(bufB);
+// Fix: synchronize (serializes all I/O) or open a handle per thread.`,y:`// shared FileChannel ch, each thread has its own buffer
+Future<?> a = pool.submit(() -> ch.read(bufA, 0));
+Future<?> b = pool.submit(() -> ch.read(bufB, 4096));
+// read(dst, position) ignores and never changes the channel position`,n:'This is how page readers in database-like code serve concurrent requests from a single open file.'},
+{t:'Serving a huge file to a socket: zero-copy (performance)',why:'This one works with streams but wastes CPU and memory on every download. It is “must use” only when throughput or heap pressure matters.',
+ w:`byte[] buf = new byte[65536];
+int n;
+while ((n = in.read(buf)) != -1) socketOut.write(buf, 0, n);`,y:`try (FileChannel src = FileChannel.open(path, READ)) {
+    long pos = 0, size = src.size();
+    while (pos < size) pos += src.transferTo(pos, size - pos, socketChannel);
+}`,n:'The target must be a WritableByteChannel such as a SocketChannel. Always loop, because the call may transfer less than requested.'}];
+must.forEach(m=>{const d=document.createElement('details');const s=document.createElement('summary');s.textContent=m.t;d.append(s);
+ const p=document.createElement('p');p.textContent=m.why;d.append(p);
+ const c=document.createElement('div');c.className='cols';
+ [['t-no','Streams, what goes wrong',m.w],['t-yes','Channels',m.y]].forEach(([k,l,code])=>{const x=document.createElement('div');x.innerHTML='<div class="lab"><span class="tag '+k+'"></span></div><pre></pre>';x.querySelector('.tag').textContent=l;x.querySelector('pre').textContent=code;c.append(x)});
+ d.append(c);const n=document.createElement('p');n.className='note';n.textContent=m.n;d.append(n);$('must').append(d)});
+
+/* ---- Quiz ---- */
+const qs=[
+{q:'You just filled a buffer with put() calls. What must you call before reading the data back?',o:['clear()','flip()','compact()','rewind() twice'],a:1,e:'flip() sets limit to the old position and position to 0.'},
+{q:'Several threads read different offsets of one open file. Which approach is safe without locking?',o:['raf.seek(p) then raf.read(buf)','FileInputStream.skip(p)','channel.read(buf, p)','BufferedReader.mark(p)'],a:2,e:'The positional read never uses or changes the shared channel position.'},
+{q:'Which call gives you a ByteBuffer backed directly by a file?',o:['Files.readAllBytes','FileChannel.map','FileInputStream.read','ByteBuffer.allocate'],a:1,e:'FileChannel.map returns a MappedByteBuffer.'}];
+qs.forEach(x=>{const d=document.createElement('div');d.className='q';const p=document.createElement('p');p.textContent=x.q;const o=document.createElement('div');o.className='opts';const f=document.createElement('div');f.className='fb';
+ x.o.forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{if(i===x.a){f.className='fb ok';f.textContent='Correct. '+x.e}else{f.className='fb bad';f.textContent='Not quite. Try again.'}};o.append(b)});
+ d.append(p,o,f);$('quiz').append(d)});
+</script>
+</body>
+</html>

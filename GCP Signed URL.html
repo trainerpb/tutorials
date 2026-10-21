@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCS Signed URLs, CORS, Resumable Transfers & FileChannel Masterclass | Prof. Soham Sengupta</title>
+<style>
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: rgba(37, 99, 235, 0.12);
+    --border: #e2e8f0;
+    --code-bg: #0f172a;
+    --code-header: #1e293b;
+    --code-text: #e2e8f0;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --header-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --base-font-size: 16px;
+    --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #090d16;
+    --bg-card: #111827;
+    --bg-subtle: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border: #1f2937;
+    --code-bg: #030712;
+    --code-header: #111827;
+    --code-text: #f1f5f9;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --header-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  }
+
+  [data-accent="blue"] { --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: rgba(37, 99, 235, 0.14); }
+  [data-accent="emerald"] { --accent: #10b981; --accent-hover: #059669; --accent-soft: rgba(16, 185, 129, 0.14); }
+  [data-accent="purple"] { --accent: #8b5cf6; --accent-hover: #7c3aed; --accent-soft: rgba(139, 92, 246, 0.14); }
+  [data-accent="rose"] { --accent: #f43f5e; --accent-hover: #e11d48; --accent-soft: rgba(244, 63, 94, 0.14); }
+  [data-accent="amber"] { --accent: #f59e0b; --accent-hover: #d97706; --accent-soft: rgba(245, 158, 11, 0.14); }
+
+  * { box-sizing: border-box; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+  html { font-size: var(--base-font-size); scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.65;
+  }
+
+  header {
+    background: var(--header-gradient);
+    color: #ffffff;
+    padding: 18px 28px 12px 28px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1440px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .brand-title h1 {
+    font-size: 1.32rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-title p {
+    margin: 3px 0 0 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn, .ctrl-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 6px 11px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .ctrl-select option { background: #0f172a; color: #fff; }
+  .ctrl-btn:hover, .ctrl-select:hover { background: rgba(255, 255, 255, 0.22); border-color: var(--accent); }
+
+  .color-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .color-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .color-dot.active { border-color: #ffffff; transform: scale(1.18); }
+
+  .nav-tabs {
+    display: flex;
+    max-width: 1440px;
+    margin: 14px auto 0 auto;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-tab {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #cbd5e1;
+    padding: 9px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .nav-tab:hover { color: #ffffff; background: rgba(255, 255, 255, 0.16); }
+  .nav-tab.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+
+  .container {
+    max-width: 1440px;
+    margin: 26px auto;
+    padding: 0 24px;
+  }
+
+  .tab-pane { display: none; animation: fadeIn 0.25s ease-out; }
+  .tab-pane.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--accent);
+    padding: 18px 24px;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+
+  .hero-banner h2 { margin: 0; font-size: 1.24rem; }
+  .hero-banner p { margin: 4px 0 0 0; font-size: 0.88rem; color: var(--text-secondary); }
+
+  .badge-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .card h3 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.14rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin: 16px 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+
+  .info-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .info-box h4 { margin: 0 0 8px 0; font-size: 0.96rem; color: var(--text-primary); }
+  .info-box p, .info-box ul { margin: 0; font-size: 0.89rem; color: var(--text-secondary); }
+  .info-box ul { padding-left: 18px; }
+
+  .callout {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+  }
+  .callout.warn { border-left-color: var(--warning); background: rgba(245, 158, 11, 0.12); }
+  .callout.danger { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+  .callout.success { border-left-color: var(--success); background: rgba(16, 185, 129, 0.12); }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--bg-card); }
+  th, td { border: 1px solid var(--border); padding: 11px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-subtle); font-weight: 700; color: var(--text-primary); }
+  tr:nth-child(even) { background: rgba(148, 163, 184, 0.04); }
+
+  .code-editor {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .code-header {
+    background: var(--code-header);
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+  }
+
+  .code-lang {
+    font-family: Consolas, monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .copy-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+  .code-editor pre {
+    margin: 0;
+    padding: 15px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.84rem;
+    color: var(--code-text);
+    line-height: 1.55;
+  }
+
+  code.inline {
+    background: var(--bg-subtle);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+    font-size: 0.85em;
+    border: 1px solid var(--border);
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 240px;
+    padding: 9px 13px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.88rem;
+  }
+
+  .action-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 0.84rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .action-btn.secondary {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .accordion-list { display: flex; flex-direction: column; gap: 10px; }
+  .accordion-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    overflow: hidden;
+  }
+
+  .accordion-btn {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: none;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.91rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-family: inherit;
+  }
+
+  .accordion-arrow { transition: transform 0.25s ease; font-size: 0.8rem; color: var(--accent); }
+  .accordion-item.active .accordion-arrow { transform: rotate(180deg); }
+
+  .accordion-panel {
+    display: none;
+    padding: 15px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 0.89rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+  }
+  .accordion-item.active .accordion-panel { display: block; }
+
+  .q-num {
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .lab-step {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .progress-bar-wrap {
+    width: 100%;
+    height: 12px;
+    background: var(--bg-subtle);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 10px 0 20px 0;
+    border: 1px solid var(--border);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--success);
+    transition: width 0.3s ease;
+  }
+
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: #fff;
+    padding: 11px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  footer {
+    text-align: center;
+    padding: 26px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    margin-top: 40px;
+    background: var(--bg-card);
+  }
+</style>
+</head>
+<body data-theme="light" data-accent="blue">
+
+<header>
+  <div class="header-top">
+    <div class="brand-title">
+      <h1>🔐 GCS Signed URLs, CORS, Resumable Streams &amp; Java NIO FileChannel Lab</h1>
+      <p>Brokered Cloud Storage Architecture, IAM, Spring Boot Microservices &amp; Browser Integration | Prof. Soham Sengupta</p>
+    </div>
+
+    <div class="controls-bar">
+      <div class="color-dots" title="Accent Theme Color">
+        <span class="color-dot active" style="background:#2563eb;" onclick="setAccent('blue', this)"></span>
+        <span class="color-dot" style="background:#10b981;" onclick="setAccent('emerald', this)"></span>
+        <span class="color-dot" style="background:#8b5cf6;" onclick="setAccent('purple', this)"></span>
+        <span class="color-dot" style="background:#f43f5e;" onclick="setAccent('rose', this)"></span>
+        <span class="color-dot" style="background:#f59e0b;" onclick="setAccent('amber', this)"></span>
+      </div>
+
+      <select class="ctrl-select" onchange="changeFontFamily(this.value)" title="Select Font Family">
+        <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">Font: Modern Sans</option>
+        <option value="Georgia, Cambria, serif">Font: Academic Serif</option>
+        <option value="Consolas, 'Courier New', monospace">Font: Monospace</option>
+      </select>
+
+      <button class="ctrl-btn" onclick="changeFontSize(-1)" title="Decrease Font Size">A-</button>
+      <button class="ctrl-btn" onclick="changeFontSize(1)" title="Increase Font Size">A+</button>
+      <button class="ctrl-btn" onclick="toggleTheme()"><span id="themeIcon">🌙</span> <span id="themeText">Dark</span></button>
+      <button class="ctrl-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+    </div>
+  </div>
+
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="openTab(event, 'tab-iam-cli')">1. CLI Lab, IAM &amp; JSON Keys</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-cors')">2. CORS Config &amp; Use Cases</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-spring-js')">3. Spring Boot API + JS Client</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-resumable')">4. Resumable Upload &amp; Download</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-filechannel')">5. FileChannel &amp; NIO APIs</button>
+    <button class="nav-tab" onclick="openTab(event, 'tab-faq-lab')">6. Interactive Lab &amp; 20 FAQs</button>
+  </nav>
+</header>
+
+<main class="container">
+
+  <!-- ==================== TAB 1: CLI LAB, IAM & SERVICE ACCOUNT JSON KEYS ==================== -->
+  <section id="tab-iam-cli" class="tab-pane active">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 1: Step-by-Step URL Signing Lab via <code class="inline">gcloud</code> CLI, IAM &amp; Service Account Keys</h2>
+        <p>Configuring Service Accounts, Impersonation vs. JSON Keys, Credential Storage Locations, and Production Guardrails</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">GOOG4-RSA-SHA256</span>
+        <span class="badge">Service Account IAM</span>
+        <span class="badge">Key Storage Security</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Architectural Concept: Why Signed URLs Need a Service Account</h3>
+      <p>A <strong>V4 Signed URL</strong> acts as a cryptographic "valet key" that delegates temporary access to a single private object in Google Cloud Storage without making the bucket public. Because the link must be signed with an RSA private key (<code class="inline">GOOG4-RSA-SHA256</code>), standard human user credentials (<code class="inline">sohamsironline@gmail.com</code>) cannot sign URLs directly. Instead, you must use a <strong>Service Account</strong> via one of two mechanisms:</p>
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>✅ Approach A: Keyless Service Account Impersonation (Production Standard)</h4>
+          <p>Your user account or Cloud Run workload calls the Google IAM <code class="inline">signBlob</code> API using <code class="inline">roles/iam.serviceAccountTokenCreator</code>. Google's managed key server signs the URL remotely—<strong>zero JSON private key files ever touch your hard drive</strong>.</p>
+        </div>
+        <div class="info-box">
+          <h4>⚠️ Approach B: Downloaded Service Account JSON Key (Local Lab / Legacy)</h4>
+          <p>You export a physical <code class="inline">.json</code> key file containing an embedded <code class="inline">-----BEGIN PRIVATE KEY-----</code> RSA block. The CLI or Spring Boot JVM signs the URL locally in memory without making a network call to IAM.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Step-by-Step Lab: IAM Setup &amp; URL Signing via <code class="inline">gcloud</code> CLI</h3>
+      <p>Follow these exact steps for project <code class="inline">ivory-link-511508-u3</code> and bucket <code class="inline">gs://soham-sg</code>:</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — STEPS 1 TO 3: CREATE SERVICE ACCOUNT &amp; GRANT BUCKET IAM ROLES</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># STEP 1: Create a dedicated Service Account specifically for signing GCS URLs
+gcloud iam service-accounts create gcs-bucket-url-signer \
+    --display-name="GCS Bucket URL Signer" \
+    --project="ivory-link-511508-u3"
+
+# STEP 2: Grant the Service Account permission to Read (Download) and Write (Upload) objects in gs://soham-sg
+# - roles/storage.objectUser (or roles/storage.objectAdmin) allows both GET downloads and PUT/POST uploads
+gcloud storage buckets add-iam-policy-binding gs://soham-sg \
+    --member="serviceAccount:gcs-bucket-url-signer@ivory-link-511508-u3.iam.gserviceaccount.com" \
+    --role="roles/storage.objectUser"
+
+# STEP 3: Grant YOUR user account permission to impersonate the Service Account (for keyless signing)
+gcloud iam service-accounts add-iam-policy-binding \
+    gcs-bucket-url-signer@ivory-link-511508-u3.iam.gserviceaccount.com \
+    --member="user:sohamsironline@gmail.com" \
+    --role="roles/iam.serviceAccountTokenCreator"</code></pre>
+      </div>
+
+      <h4>Step 4A: Sign URL via Keyless Impersonation (Recommended) vs. Step 4B: Sign URL via JSON Key File</h4>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — STEP 4A (IMPERSONATION) &amp; STEP 4B (JSON KEY FILE)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># --- METHOD 4A: KEYLESS SIGNING VIA IMPERSONATION (Wait ~90s after Step 3 for IAM propagation) ---
+# 1. Generate a 5-minute (300s) GET Signed URL to download sample-text.txt
+gcloud storage sign-url gs://soham-sg/sample-text.txt \
+    --impersonate-service-account=gcs-bucket-url-signer@ivory-link-511508-u3.iam.gserviceaccount.com \
+    --duration=5m \
+    --http-verb=GET \
+    --region=us-central1
+
+# 2. Generate a 10-minute PUT Signed URL to upload a new file (locks Content-Type header)
+gcloud storage sign-url gs://soham-sg/new-upload.txt \
+    --impersonate-service-account=gcs-bucket-url-signer@ivory-link-511508-u3.iam.gserviceaccount.com \
+    --duration=10m \
+    --http-verb=PUT \
+    --headers=content-type=text/plain \
+    --region=us-central1
+
+
+# --- METHOD 4B: SIGNING USING A DOWNLOADED SERVICE ACCOUNT JSON KEY FILE ---
+# 1. Create and download the JSON key to a secure folder OUTSIDE your Git repository
+mkdir -p ~/.gcp-keys
+gcloud iam service-accounts keys create ~/.gcp-keys/signer-sa-key.json \
+    --iam-account=gcs-bucket-url-signer@ivory-link-511508-u3.iam.gserviceaccount.com
+
+# 2. Install pyopenssl if prompted by gcloud for local cryptographic signing, then sign:
+gcloud storage sign-url gs://soham-sg/sample-text.txt \
+    --private-key-file=~/.gcp-keys/signer-sa-key.json \
+    --duration=5m \
+    --http-verb=GET</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Where Should the Service Account JSON Key Be Stored? (Production vs. Local Rules)</h3>
+      <div class="callout danger">
+        <strong>🚨 CRITICAL PRODUCTION WARNING (What is NOT a Good Practice):</strong><br>
+        1. <strong>NEVER store a Service Account JSON key inside <code class="inline">src/main/resources/</code></strong> or commit it to Git! Public and private Git repositories are continuously scanned; a leaked JSON key gives attackers persistent access until manually revoked.<br>
+        2. <strong>NEVER bake a JSON key file inside a Docker image (<code class="inline">COPY key.json /app/</code>):</strong> Anyone who pulls the image from Artifact Registry can extract the layer and steal the private key.<br>
+        3. <strong>Avoid long-lived JSON keys in production altogether:</strong> Exported JSON keys do not expire automatically. If your Organization Policy enforces <code class="inline">iam.disableServiceAccountKeyCreation</code>, generating JSON keys is blocked by design.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Environment</th>
+              <th>Where Credentials Should Be Stored</th>
+              <th>How Spring Boot Loads It</th>
+              <th>Production Verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Local Developer Laptop (Best)</strong></td>
+              <td>No key file! Use ADC Impersonation:<br><code class="inline">%APPDATA%\gcloud\application_default_credentials.json</code></td>
+              <td>Run <code class="inline">gcloud auth application-default login --impersonate-service-account=...</code></td>
+              <td>✅ <strong>Recommended for Local Dev</strong> (Zero raw private keys on disk).</td>
+            </tr>
+            <tr>
+              <td><strong>Local Developer Laptop (If using JSON Key)</strong></td>
+              <td>Restricted OS folder <strong>outside</strong> the project repo:<br>&bull; Windows: <code class="inline">C:\Users\&lt;User&gt;\.gcp-keys\signer-key.json</code><br>&bull; Linux/Mac: <code class="inline">~/.gcp-keys/signer-key.json</code> (<code class="inline">chmod 600</code>)</td>
+              <td>Set OS Env Var:<br><code class="inline">GOOGLE_APPLICATION_CREDENTIALS=C:\Users\...</code><br>or <code class="inline">spring.cloud.gcp.storage.credentials.location=file:...</code></td>
+              <td>⚠️ <strong>Acceptable ONLY for Local Lab</strong>. Delete key via <code class="inline">gcloud iam service-accounts keys delete</code> when finished.</td>
+            </tr>
+            <tr>
+              <td><strong>Production on GCP (Cloud Run, GKE, Compute Engine)</strong></td>
+              <td><strong>Attached Service Account + IAM Credentials API</strong> (Keyless via Metadata Server).</td>
+              <td>Attach <code class="inline">gcs-bucket-url-signer</code> to the Cloud Run service / VM and grant it <code class="inline">roles/iam.serviceAccountTokenCreator</code>.</td>
+              <td>🏆 <strong>Gold Standard for Production</strong> (Short-lived auto-rotated tokens).</td>
+            </tr>
+            <tr>
+              <td><strong>Production On-Premise / AWS / Azure</strong></td>
+              <td><strong>Workload Identity Federation</strong> or <strong>Google Secret Manager / HashiCorp Vault</strong> mounted in-memory (<code class="inline">/run/secrets/</code>).</td>
+              <td>Injected at container runtime from Secret Manager with automated key rotation.</td>
+              <td>✅ <strong>Production Standard for Hybrid/Multi-Cloud</strong>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 2: BUCKET CORS CONFIGURATION & COMMON USE CASES ==================== -->
+  <section id="tab-cors" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 2: Bucket CORS Configuration &amp; Enterprise Signed URL Use Cases</h2>
+        <p>Why JavaScript <code class="inline">fetch()</code> Fails Without CORS, Configuring <code class="inline">cors.json</code>, and Production Patterns</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Cross-Origin Resource Sharing</span>
+        <span class="badge">Preflight OPTIONS</span>
+        <span class="badge">Browser Security</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Why Do Browser JavaScript Clients Fail Without Bucket CORS?</h3>
+      <p>When you paste a Signed URL into your browser's address bar or run <code class="inline">curl</code>, it works immediately. However, when a JavaScript frontend running on <code class="inline">http://localhost:3000</code> or <code class="inline">https://portal.mycompany.com</code> calls <code class="inline">fetch(signedUrl, { method: 'PUT', body: file })</code> to upload to <code class="inline">https://soham-sg.storage.googleapis.com</code>, the browser blocks the request with:</p>
+      <div class="callout danger">
+        <code class="inline">Access to fetch at 'https://soham-sg.storage.googleapis.com/...' from origin 'http://localhost:3000' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.</code>
+      </div>
+      <p><strong>What happens under the hood:</strong> Because the origin (<code class="inline">localhost:3000</code>) differs from the GCS host (<code class="inline">storage.googleapis.com</code>) and uses a <code class="inline">PUT</code> verb or custom headers, the browser automatically sends an unauthenticated HTTP <code class="inline">OPTIONS</code> <strong>Preflight Request</strong> to your GCS bucket first. Your bucket must be configured with a <strong>CORS policy</strong> so GCS replies with the matching <code class="inline">Access-Control-Allow-*</code> headers.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. Creating &amp; Applying <code class="inline">cors.json</code> via <code class="inline">gcloud</code> CLI (Every Field Explained)</h3>
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JSON — cors.json (PRODUCTION-READY BUCKET CORS POLICY)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>[
+  {
+    "origin": [
+      "http://localhost:3000",
+      "http://localhost:8080",
+      "https://app.sohamsengupta.com"
+    ],
+    "method": [
+      "GET",
+      "PUT",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Content-Disposition",
+      "ETag",
+      "x-goog-resumable",
+      "x-goog-meta-uploaded-by"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>JSON Property</th>
+              <th>Why It Is Needed &amp; Production Guidance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="inline">"origin"</code></td>
+              <td>Lists the exact frontend domains (<code class="inline">scheme + host + port</code>) allowed to make XHR/<code class="inline">fetch</code> calls to the bucket.<br>⚠️ <strong>Production Warning:</strong> Never set <code class="inline">"origin": ["*"]</code> on a bucket that accepts authenticated or signed uploads in production—always whitelist your exact frontend domains!</td>
+            </tr>
+            <tr>
+              <td><code class="inline">"method"</code></td>
+              <td>HTTP verbs permitted from the browser: <code class="inline">GET</code> (downloads), <code class="inline">PUT</code> (direct uploads &amp; resumable chunks), <code class="inline">POST</code> (initiating resumable sessions), <code class="inline">HEAD</code> (checking metadata), and <code class="inline">OPTIONS</code> (preflight).</td>
+            </tr>
+            <tr>
+              <td><code class="inline">"responseHeader"</code></td>
+              <td>Headers the browser is allowed to send in preflighted requests or read from the response. Must include <code class="inline">Content-Type</code> (for PUT uploads), <code class="inline">Content-Range</code> (for resumable uploads/downloads), and <code class="inline">x-goog-resumable</code>.</td>
+            </tr>
+            <tr>
+              <td><code class="inline">"maxAgeSeconds"</code></td>
+              <td>Tells the browser to cache the <code class="inline">OPTIONS</code> preflight response for <code class="inline">3600</code> seconds (1 hour) so it doesn't send a redundant preflight check on every single file chunk.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">BASH — APPLY, INSPECT &amp; TEST BUCKET CORS VIA GCLOUD CLI</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># 1. Apply the cors.json configuration to your bucket
+gcloud storage buckets update gs://soham-sg --cors-file=cors.json
+
+# 2. Verify that the CORS configuration is active on the bucket
+gcloud storage buckets describe gs://soham-sg --format="default(cors_config)"
+
+# 3. Simulate a Browser Preflight OPTIONS check using curl to verify Access-Control-Allow-Origin headers
+curl -i -X OPTIONS "https://soham-sg.storage.googleapis.com/sample-text.txt" \
+    -H "Origin: http://localhost:8080" \
+    -H "Access-Control-Request-Method: PUT" \
+    -H "Access-Control-Request-Headers: Content-Type"
+
+# 4. (Optional) Remove all CORS rules from a bucket if needed
+gcloud storage buckets update gs://soham-sg --clear-cors</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Common Enterprise Use Cases for Signed URLs + CORS</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Use Case</th>
+              <th>HTTP Verb &amp; Signed Headers</th>
+              <th>Why Signed URLs Beat Streaming Through Spring Boot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Direct Browser Avatar / PDF Resume Upload</strong></td>
+              <td><code class="inline">PUT</code> + <code class="inline">Content-Type: application/pdf</code></td>
+              <td>Spring Boot validates the user's JWT and signs a URL valid for 5 minutes. The browser uploads the PDF straight to GCS, saving 100% of Spring Boot ingress bandwidth and CPU.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Private Invoice / Medical Record Download</strong></td>
+              <td><code class="inline">GET</code> + <code class="inline">response-content-disposition=attachment</code></td>
+              <td>Medical records remain strictly private in GCS. After verifying HIPAA authorization, Spring Boot returns a 2-minute download link that expires immediately after use.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Size-Bounded Upload Enforcement</strong></td>
+              <td><code class="inline">PUT</code> + <code class="inline">X-Goog-Content-Length-Range: 0,5242880</code></td>
+              <td>By signing the <code class="inline">x-goog-content-length-range</code> header (e.g., max 5 MB), GCS itself rejects any user attempting to upload a 50 GB file over the signed link!</td>
+            </tr>
+            <tr>
+              <td><strong>4. 4K Video Resumable Upload from Browser</strong></td>
+              <td><code class="inline">POST</code> (<code class="inline">x-goog-resumable: start</code>) &rarr; <code class="inline">PUT</code> chunks</td>
+              <td>Allows users on unstable Wi-Fi/mobile networks to upload multi-gigabyte video lectures with a live progress bar and automatic byte-offset recovery.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 3: SPRING BOOT API + JAVASCRIPT CLIENT (LINE-BY-LINE) ==================== -->
+  <section id="tab-spring-js" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 3: Spring Boot Microservice API &amp; JavaScript Browser Client</h2>
+        <p>Complete End-to-End Implementation for Generating &amp; Consuming V4 Signed URLs with Every Line Explained</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Spring Boot REST API</span>
+        <span class="badge">Line-by-Line Annotated</span>
+        <span class="badge">Vanilla JS fetch() Client</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Spring Boot Configuration (<code class="inline">application.properties</code> &amp; <code class="inline">GcsStorageConfig.java</code>)</h3>
+      <p>Below we show how to configure the <code class="inline">Storage</code> client in Spring Boot so it supports <strong>both</strong> an externalized JSON key file (for local lab testing) and Application Default Credentials (for production):</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">PROPERTIES — src/main/resources/application.properties</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code># Server Port for our Spring Boot Microservice
+server.port=8080
+
+# Target GCP Project ID and Bucket Name
+app.gcp.project-id=ivory-link-511508-u3
+app.gcs.bucket-name=soham-sg
+
+# Path to Service Account JSON Key stored OUTSIDE the Git repository (for local lab testing)
+# In production on Cloud Run/GKE, leave this empty and use attached Service Account ADC!
+app.gcs.signer-key-path=C:/Users/soham/.gcp-keys/signer-sa-key.json</code></pre>
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — GcsStorageConfig.java (EVERY LINE EXPLAINED)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>package com.soham.cloud.signedurl; // Declares the Java package namespace for our microservice
+
+import com.google.auth.oauth2.GoogleCredentials; // Base class representing Google OAuth2 credentials
+import com.google.auth.oauth2.ServiceAccountCredentials; // Subclass holding the RSA private key needed to sign URLs
+import com.google.cloud.storage.Storage; // Primary Google Cloud Storage client interface
+import com.google.cloud.storage.StorageOptions; // Builder factory used to construct the Storage client
+import org.springframework.beans.factory.annotation.Value; // Injects values from application.properties
+import org.springframework.context.annotation.Bean; // Registers the returned object as a Spring-managed singleton bean
+import org.springframework.context.annotation.Configuration; // Marks this class as a Spring configuration source
+
+import java.io.FileInputStream; // Reads raw bytes from an external file path on the OS filesystem
+import java.io.IOException; // Exception thrown if the credential file cannot be read
+
+@Configuration // Tells Spring Boot to scan this class at startup and initialize @Bean definitions
+public class GcsStorageConfig {
+
+    @Value("${app.gcp.project-id}") // Injects 'ivory-link-511508-u3' from application.properties
+    private String projectId;
+
+    @Value("${app.gcs.signer-key-path:}") // Injects external JSON key path; defaults to empty string if omitted
+    private String signerKeyPath;
+
+    @Bean // Exposes a singleton 'Storage' client bean that can be @Autowired across our application
+    public Storage googleCloudStorage() throws IOException {
+        GoogleCredentials credentials; // Declares the credential object that will authenticate and sign requests
+
+        // Checks if an explicit external JSON key file path was configured (Local Lab mode)
+        if (signerKeyPath != null &amp;&amp; !signerKeyPath.isBlank()) {
+            // Opens a stream to the external JSON file (stored safely outside the repo) and parses its RSA private key
+            try (FileInputStream keyStream = new FileInputStream(signerKeyPath)) {
+                credentials = ServiceAccountCredentials.fromStream(keyStream);
+            }
+        } else {
+            // PRODUCTION MODE: Automatically loads Application Default Credentials (ADC) from the Cloud Run/GKE Metadata Server
+            credentials = GoogleCredentials.getApplicationDefault();
+        }
+
+        // Builds and returns the thread-safe Storage client bound to our project and signing credentials
+        return StorageOptions.newBuilder()
+                .setProjectId(projectId) // Binds the client to project 'ivory-link-511508-u3'
+                .setCredentials(credentials) // Attaches the credentials capable of signing V4 URLs
+                .build() // Finalizes the StorageOptions configuration object
+                .getService(); // Instantiates and returns the active Storage service client
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Spring Boot Signed URL Microservice Controller (<code class="inline">SignedUrlController.java</code>)</h3>
+      <p>This REST controller exposes two endpoints to your JavaScript frontend: <code class="inline">GET /api/storage/sign-download</code> (returns a 5-minute V4 GET URL) and <code class="inline">POST /api/storage/sign-upload</code> (returns a 10-minute V4 PUT URL locked to the exact <code class="inline">Content-Type</code>):</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — SignedUrlController.java (EVERY LINE EXPLAINED)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>package com.soham.cloud.signedurl; // Package declaration
+
+import com.google.cloud.storage.BlobId; // Composite identifier holding (bucketName, objectName)
+import com.google.cloud.storage.BlobInfo; // Metadata wrapper around BlobId (holds Content-Type, headers)
+import com.google.cloud.storage.HttpMethod; // Enum representing HTTP verbs (GET, PUT, POST, DELETE)
+import com.google.cloud.storage.Storage; // The GCS client bean configured in GcsStorageConfig
+import org.springframework.beans.factory.annotation.Value; // Reads properties from application.properties
+import org.springframework.http.ResponseEntity; // Wraps HTTP status codes and JSON response bodies
+import org.springframework.web.bind.annotation.*; // Provides @RestController, @GetMapping, @PostMapping, @CrossOrigin
+
+import java.net.URL; // Standard Java URL object returned by storage.signUrl()
+import java.util.Map; // Used to construct clean JSON key-value responses
+import java.util.concurrent.TimeUnit; // Defines time units (MINUTES, SECONDS) for URL expiration
+
+@RestController // Marks this class as a REST API controller that serializes responses to JSON automatically
+@RequestMapping("/api/storage") // Base URI path for all endpoints in this controller
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080"}) // Allows our JS browser client to call this Spring Boot API
+public class SignedUrlController {
+
+    private final Storage storage; // Reference to our thread-safe Google Cloud Storage client bean
+
+    @Value("${app.gcs.bucket-name}") // Injects 'soham-sg' from application.properties
+    private String bucketName;
+
+    // Constructor injection binds the Storage bean configured in GcsStorageConfig
+    public SignedUrlController(Storage storage) {
+        this.storage = storage; // Assigns injected bean to the final field
+    }
+
+    /**
+     * ENDPOINT 1: Generate a V4 Signed URL for DOWNLOADING an existing private object
+     * Example Call: GET http://localhost:8080/api/storage/sign-download?fileName=sample-text.txt
+     */
+    @GetMapping("/sign-download") // Maps HTTP GET requests on /api/storage/sign-download
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; generateDownloadSignedUrl(
+            @RequestParam("fileName") String fileName) { // Extracts the 'fileName' query parameter from the request
+
+        // Creates the unique pointer to 'gs://soham-sg/<fileName>'
+        BlobId blobId = BlobId.of(bucketName, fileName);
+
+        // Wraps the BlobId in a BlobInfo metadata object required by the signUrl method
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
+
+        // Cryptographically signs the URL using the Service Account's private key (GOOG4-RSA-SHA256)
+        URL signedGetUrl = storage.signUrl(
+                blobInfo, // The target bucket and object to sign
+                5, // Duration value: valid for 5 minutes (300 seconds)
+                TimeUnit.MINUTES, // Unit of time for the duration parameter
+                Storage.SignUrlOption.withV4Signature(), // Enforces Google's modern V4 signing algorithm
+                Storage.SignUrlOption.httpMethod(HttpMethod.GET) // Locks the signature strictly to HTTP GET requests
+        );
+
+        // Returns HTTP 200 OK with a JSON payload containing the signed URL and metadata
+        return ResponseEntity.ok(Map.of(
+                "fileName", fileName, // Echoes back the requested file name
+                "httpMethod", "GET", // Indicates the client must use HTTP GET
+                "expiresInSeconds", "300", // Informs the client of the 5-minute TTL
+                "signedUrl", signedGetUrl.toString() // Converts the signed URL to a String for the browser
+        ));
+    }
+
+    /**
+     * ENDPOINT 2: Generate a V4 Signed URL for UPLOADING a file directly from the browser
+     * Example Call: POST http://localhost:8080/api/storage/sign-upload?fileName=report.pdf&amp;contentType=application/pdf
+     */
+    @PostMapping("/sign-upload") // Maps HTTP POST requests on /api/storage/sign-upload
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; generateUploadSignedUrl(
+            @RequestParam("fileName") String fileName, // Target object name to create inside the bucket
+            @RequestParam("contentType") String contentType) { // MIME type of the file the browser wants to upload
+
+        // Creates the unique identifier for the new object inside 'gs://soham-sg'
+        BlobId blobId = BlobId.of(bucketName, fileName);
+
+        // Builds the BlobInfo and explicitly sets the expected Content-Type (e.g., text/plain or image/png)
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(contentType) // Binds the MIME type to the object definition
+                .build();
+
+        // Signs a PUT URL that mathematically locks in the Content-Type header!
+        URL signedPutUrl = storage.signUrl(
+                blobInfo, // Target object metadata
+                10, // Valid for 10 minutes
+                TimeUnit.MINUTES, // Time unit
+                Storage.SignUrlOption.withV4Signature(), // Uses V4 RSA-SHA256 signing
+                Storage.SignUrlOption.httpMethod(HttpMethod.PUT), // Locks the URL strictly to HTTP PUT uploads
+                Storage.SignUrlOption.withContentType() // CRITICAL: Forces the browser to send the exact matching Content-Type header!
+        );
+
+        // Returns HTTP 200 OK with the signed PUT URL and required Content-Type header
+        return ResponseEntity.ok(Map.of(
+                "fileName", fileName, // Target object key
+                "httpMethod", "PUT", // Browser must execute fetch(url, { method: 'PUT' })
+                "requiredContentType", contentType, // Browser must include Header 'Content-Type: <contentType>'
+                "signedUrl", signedPutUrl.toString() // The complete V4 signed upload URL
+        ));
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. JavaScript Browser Client (Upload &amp; Download via Signed URLs — Every Line Explained)</h3>
+      <p>Once your bucket has <code class="inline">cors.json</code> applied (from Tab 2) and your Spring Boot microservice is running, a browser client can upload and download files directly to/from GCS using standard <code class="inline">fetch()</code> calls:</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVASCRIPT — browser-gcs-client.js (EVERY LINE EXPLAINED)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>// Base URL of our Spring Boot Microservice API
+const SPRING_API_BASE = "http://localhost:8080/api/storage";
+
+/**
+ * 1. DIRECT BROWSER UPLOAD TO GCS USING A SPRING BOOT V4 SIGNED PUT URL
+ * @param {File} fileInputObj - The File object selected from &lt;input type="file"&gt;
+ */
+async function uploadFileViaSignedUrl(fileInputObj) {
+    // Extract the file's name (e.g., "notes.txt") and MIME type (e.g., "text/plain")
+    const fileName = encodeURIComponent(fileInputObj.name);
+    const contentType = encodeURIComponent(fileInputObj.type || "application/octet-stream");
+
+    // STEP A: Ask our Spring Boot microservice to generate a 10-minute V4 Signed PUT URL
+    const tokenResponse = await fetch(
+        `${SPRING_API_BASE}/sign-upload?fileName=${fileName}&amp;contentType=${contentType}`,
+        { method: "POST" } // Calls our @PostMapping("/sign-upload") endpoint
+    );
+
+    // Parse the JSON response returned by Spring Boot ({ signedUrl, requiredContentType, ... })
+    const { signedUrl, requiredContentType } = await tokenResponse.json();
+
+    // STEP B: Upload the raw file bytes DIRECTLY from the browser to Google Cloud Storage!
+    // Notice this request goes straight to https://soham-sg.storage.googleapis.com, bypassing Spring Boot!
+    const gcsUploadResponse = await fetch(signedUrl, {
+        method: "PUT", // Must match HttpMethod.PUT signed by Spring Boot
+        headers: {
+            // CRITICAL: Must match the exact Content-Type locked via SignUrlOption.withContentType()
+            "Content-Type": requiredContentType
+        },
+        body: fileInputObj // Streams the raw binary File/Blob directly over HTTPS to GCS
+    });
+
+    // Verify GCS returned HTTP 200 OK
+    if (!gcsUploadResponse.ok) {
+        throw new Error(`GCS Upload failed with status: ${gcsUploadResponse.status}`);
+    }
+    console.log("File uploaded directly to GCS bucket successfully!");
+}
+
+/**
+ * 2. DIRECT BROWSER DOWNLOAD FROM GCS USING A SPRING BOOT V4 SIGNED GET URL
+ * @param {string} targetFileName - Name of the private object in GCS (e.g., "sample-text.txt")
+ */
+async function downloadFileViaSignedUrl(targetFileName) {
+    // STEP A: Request a 5-minute V4 Signed GET URL from our Spring Boot microservice
+    const apiRes = await fetch(
+        `${SPRING_API_BASE}/sign-download?fileName=${encodeURIComponent(targetFileName)}`,
+        { method: "GET" } // Calls @GetMapping("/sign-download")
+    );
+
+    // Extract the temporary signedUrl string from the Spring Boot JSON response
+    const { signedUrl } = await apiRes.json();
+
+    // STEP B: Fetch the private object's content directly from Google Cloud Storage (CORS enabled)
+    const gcsDownloadRes = await fetch(signedUrl, { method: "GET" });
+
+    // Read the downloaded payload (or use .blob() for binary images/PDFs)
+    const fileText = await gcsDownloadRes.text();
+    console.log("Downloaded content from GCS:", fileText);
+    return fileText;
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 4: RESUMABLE UPLOAD & DOWNLOAD ARCHITECTURE ==================== -->
+  <section id="tab-resumable" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 4: Resumable Uploads &amp; Downloads — GCS vs. Spring Boot Responsibility</h2>
+        <p>Who Manages Chunking, Session State, Byte Offsets, and <code class="inline">HTTP 308 / 206</code> Recovery?</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">Control Plane vs Data Plane</span>
+        <span class="badge">HTTP 308 Resume Incomplete</span>
+        <span class="badge">HTTP 206 Range Reads</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. Architectural Verdict: Is Resumable Transfer Managed by GCS or Spring Boot?</h3>
+      <p>A frequent architectural question in cloud interviews and production design is: <em>"When implementing resumable uploads or downloads, does Google Cloud Storage manage the resumption automatically, or must our Spring Boot API handle it explicitly?"</em></p>
+      <p>The answer lies in separating the <strong>Control Plane (Session Initiation)</strong> from the <strong>Data Plane (Byte Streaming &amp; Offset Tracking)</strong>:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>What Google Cloud Storage (GCS) Manages Natively</th>
+              <th>What Your Spring Boot API Must Handle</th>
+              <th>What the Client (Browser JS or Java SDK) Must Handle</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Browser-to-GCS Resumable Upload</strong><br><em>(Direct Client Upload)</em></td>
+              <td><strong>100% of Session State &amp; Byte Tracking:</strong><br>&bull; Generates a unique <code class="inline">upload_id</code> Session URI valid for <strong>7 days</strong>.<br>&bull; Buffers incoming 256 KB-aligned chunks.<br>&bull; Responds with <code class="inline">HTTP 308 Resume Incomplete</code> + <code class="inline">Range: bytes=0-X</code> when asked how many bytes succeeded.<br>&bull; Finalizes the object atomically on the last byte.</td>
+              <td><strong>Control Plane Only (Zero Byte Handling!):</strong><br>Spring Boot only initiates the session (either by signing a <code class="inline">POST</code> URL with header <code class="inline">x-goog-resumable: start</code> OR making a 1-line POST to GCS to obtain the <code class="inline">Location</code> Session URI) and returns that URI to the browser.</td>
+              <td><strong>Chunking &amp; Retry Loop:</strong><br>A standard browser <code class="inline">&lt;input type="file"&gt;</code> will <strong>not</strong> auto-resume on its own. Your JS code must slice the file (<code class="inline">file.slice()</code>), send <code class="inline">PUT</code> chunks with <code class="inline">Content-Range</code> headers, and query the Session URI on network failure.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Backend-to-GCS Resumable Upload</strong><br><em>(Server-Side Upload)</em></td>
+              <td>Same native 7-day <code class="inline">upload_id</code> session tracking and atomic commit on Google's storage servers.</td>
+              <td><strong>Use <code class="inline">storage.writer(blobInfo)</code> (<code class="inline">WriteChannel</code>):</strong><br>Do <em>not</em> use <code class="inline">storage.create(blobInfo, byte[])</code> (which is a one-shot non-resumable upload). Using <code class="inline">WriteChannel</code> automatically uses a GCS resumable session!</td>
+              <td>The Google Cloud Java SDK <code class="inline">WriteChannel</code> automatically chunks data (default 16 MB, configurable in 256 KB multiples) and allows state capture via <code class="inline">writer.capture()</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Resumable Download</strong><br><em>(Browser or Backend)</em></td>
+              <td><strong>100% Managed Natively via HTTP <code class="inline">Range</code> Headers:</strong><br>Every GCS object and every standard <code class="inline">GET</code> V4 Signed URL natively supports <code class="inline">Range: bytes=start-end</code> and returns <code class="inline">HTTP 206 Partial Content</code>.</td>
+              <td><strong>Nothing extra!</strong><br>A standard <code class="inline">HttpMethod.GET</code> V4 Signed URL generated by Spring Boot automatically supports byte-range resumption out of the box.</td>
+              <td>If a download drops at byte <code class="inline">5,000,000</code>, the client simply sends <code class="inline">GET</code> to the same Signed URL with header <code class="inline">Range: bytes=5000000-</code> (or uses <code class="inline">ReadChannel.seek(5000000L)</code> in Java).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Code Example: Spring Boot Resumable Session Initiator + Browser Chunked Resume</h3>
+      <p>Notice how Spring Boot signs a <code class="inline">POST</code> URL with the mandatory <code class="inline">x-goog-resumable: start</code> extension header, and the browser uses the returned <code class="inline">Location</code> header (the <strong>Resumable Session URI</strong>) to upload chunks and recover from network drops:</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — SPRING BOOT ENDPOINT TO SIGN A RESUMABLE UPLOAD INITIATION URL</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>// Inside SignedUrlController.java:
+@PostMapping("/sign-resumable-init") // Endpoint called once by the browser before starting a large upload
+public ResponseEntity&lt;Map&lt;String, String&gt;&gt; signResumableInitiationUrl(
+        @RequestParam("fileName") String fileName, // Target object name in gs://soham-sg
+        @RequestParam("contentType") String contentType) { // MIME type of the large file
+
+    // 1. Identify the target object in our bucket
+    BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, fileName))
+            .setContentType(contentType) // Binds the MIME type to the session
+            .build();
+
+    // 2. Define the mandatory GCS extension header that triggers a Resumable Upload Session
+    Map&lt;String, String&gt; extHeaders = Map.of("x-goog-resumable", "start");
+
+    // 3. Sign an HTTP POST URL locking in 'x-goog-resumable: start'
+    URL signedInitUrl = storage.signUrl(
+            blobInfo,
+            15, // The client has 15 minutes to initiate the session (once initiated, the session URI lasts 7 days!)
+            TimeUnit.MINUTES,
+            Storage.SignUrlOption.withV4Signature(),
+            Storage.SignUrlOption.httpMethod(HttpMethod.POST), // Resumable initiation MUST use HTTP POST
+            Storage.SignUrlOption.withContentType(), // Locks Content-Type
+            Storage.SignUrlOption.withExtHeaders(extHeaders) // Locks 'x-goog-resumable: start' into the signature
+    );
+
+    // 4. Return the signed initiation URL to the browser
+    return ResponseEntity.ok(Map.of(
+            "signedInitiationUrl", signedInitUrl.toString(),
+            "requiredHeaderKey", "x-goog-resumable",
+            "requiredHeaderValue", "start"
+    ));
+}</code></pre>
+      </div>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVASCRIPT — BROWSER RESUMABLE UPLOAD &amp; RESUMABLE RANGE DOWNLOAD</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>/**
+ * PART A: Initiate Resumable Session, Upload in 256KB Chunks &amp; Auto-Resume on Interruption
+ */
+async function resumableBrowserUpload(file, signedInitiationUrl) {
+    // 1. Send an empty POST with 'x-goog-resumable: start' to get the 7-day GCS Session URI
+    const initRes = await fetch(signedInitiationUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": file.type, // Must match signed Content-Type
+            "x-goog-resumable": "start" // Tells GCS to open a resumable session and return a 'Location' header
+        }
+    });
+
+    // 2. Extract the unique Resumable Session URI from the HTTP 'Location' response header
+    // (Note: Once you have this sessionUri, it already contains an embedded upload_id token!)
+    const sessionUri = initRes.headers.get("Location");
+    let offset = 0; // Tracks the current byte offset
+
+    // 3. If recovering from a network drop, ask GCS how many bytes it already committed!
+    const statusRes = await fetch(sessionUri, {
+        method: "PUT",
+        headers: { "Content-Range": `bytes */${file.size}` } // Queries GCS for current committed byte range
+    });
+    if (statusRes.status === 308) { // HTTP 308 = Resume Incomplete
+        const rangeHeader = statusRes.headers.get("Range"); // e.g., "bytes=0-524287"
+        if (rangeHeader) {
+            offset = parseInt(rangeHeader.split("-")[1], 10) + 1; // Resume from the exact next byte!
+        }
+    }
+
+    // 4. Stream remaining bytes from 'offset' to the end of the file
+    const remainingBlob = file.slice(offset, file.size); // Slices only the unuploaded portion of the file
+    const uploadRes = await fetch(sessionUri, {
+        method: "PUT",
+        headers: {
+            "Content-Range": `bytes ${offset}-${file.size - 1}/${file.size}` // Informs GCS of the exact byte window
+        },
+        body: remainingBlob // Sends only the remaining bytes directly to GCS
+    });
+    console.log("Resumable upload finished with status:", uploadRes.status); // 200 OK or 201 Created
+}
+
+/**
+ * PART B: Resumable Download from a Standard V4 GET Signed URL using HTTP Range Header
+ */
+async function resumePartialDownload(signedGetUrl, alreadyDownloadedBytes) {
+    // GCS natively honors the 'Range' header on any GET Signed URL and returns HTTP 206 Partial Content!
+    const response = await fetch(signedGetUrl, {
+        method: "GET",
+        headers: {
+            "Range": `bytes=${alreadyDownloadedBytes}-` // Requests only bytes from alreadyDownloadedBytes to EOF
+        }
+    });
+    console.log("HTTP Status (206 = Partial Content):", response.status);
+    return await response.blob();
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 5: DEDICATED TAB FOR FILE CHANNEL APIs ==================== -->
+  <section id="tab-filechannel" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 5: Dedicated Deep-Dive — Java NIO <code class="inline">FileChannel</code>, <code class="inline">WriteChannel</code> &amp; <code class="inline">ReadChannel</code> APIs</h2>
+        <p>Solving JVM Heap <code class="inline">OutOfMemoryError</code>, Constant-Memory Streaming, Random-Access Seeking &amp; State Checkpointing</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">java.nio.channels.FileChannel</span>
+        <span class="badge">com.google.cloud.WriteChannel</span>
+        <span class="badge">com.google.cloud.ReadChannel</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>1. What Problem Do the Channel APIs Solve?</h3>
+      <p>In naive Java and Spring Boot applications, developers frequently write <code class="inline">storage.create(blobInfo, Files.readAllBytes(path))</code> or <code class="inline">byte[] data = storage.readAllBytes(blobId)</code>. While this works for a 2 KB text file, it causes catastrophic production failures at scale:</p>
+
+      <div class="grid-2">
+        <div class="info-box">
+          <h4>💥 The Problem: Byte-Array Heap Exhaustion (<code class="inline">OOM</code>)</h4>
+          <ul>
+            <li><strong>Memory Contiguity Limit:</strong> <code class="inline">byte[]</code> requires a single contiguous block of JVM Heap memory and is capped at <code class="inline">Integer.MAX_VALUE</code> (~2.14 GB).</li>
+            <li><strong>Concurrent Crash on Small VMs:</strong> On a free-tier <code class="inline">e2-micro</code> VM (1 GB RAM) or a 512 MB Cloud Run container, if just <strong>two users</strong> upload or download a 300 MB video using <code class="inline">byte[]</code>, the JVM immediately crashes with <code class="inline">java.lang.OutOfMemoryError: Java heap space</code>!</li>
+            <li><strong>No Random Seeking or Pause/Resume:</strong> With <code class="inline">readAllBytes()</code>, reading the last 1 MB of a 10 GB log file forces you to download all 10 GB.</li>
+          </ul>
+        </div>
+        <div class="info-box">
+          <h4>🚀 The Solution: Java NIO Channels (<code class="inline">FileChannel</code> + <code class="inline">WriteChannel</code> / <code class="inline">ReadChannel</code>)</h4>
+          <ul>
+            <li><strong>Constant $O(1)$ Memory Footprint:</strong> A 50 GB file is streamed through a fixed <strong>64 KB or 2 MB <code class="inline">ByteBuffer</code></strong>. Your JVM heap usage stays flat at ~2 MB regardless of whether the file is 10 MB or 5 TB!</li>
+            <li><strong>Off-Heap Direct Buffers:</strong> Using <code class="inline">ByteBuffer.allocateDirect()</code> with <code class="inline">FileChannel</code> avoids copying bytes between OS kernel memory and JVM heap memory.</li>
+            <li><strong>Random-Access Cloud Seeking:</strong> <code class="inline">ReadChannel.seek(offset)</code> jumps directly to any byte offset in a GCS object over HTTP Range requests.</li>
+            <li><strong>Serializable Checkpoints:</strong> <code class="inline">WriteChannel.capture()</code> captures the live resumable upload state so you can pause and resume across threads or JVM restarts.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature / Metric</th>
+              <th>Naive Byte Array (<code class="inline">storage.create(info, byte[])</code> / <code class="inline">readAllBytes</code>)</th>
+              <th>Channel API (<code class="inline">FileChannel</code> + <code class="inline">WriteChannel</code> / <code class="inline">ReadChannel</code>)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>JVM Memory Usage for a 4 GB File</strong></td>
+              <td><strong>&gt; 4 GB RAM</strong> (Instant <code class="inline">OutOfMemoryError</code> on standard containers)</td>
+              <td><strong>~64 KB to 2 MB RAM</strong> (Constant buffer size; safe on <code class="inline">e2-micro</code>)</td>
+            </tr>
+            <tr>
+              <td><strong>Maximum File Size Supported</strong></td>
+              <td>Hard-limited to &lt; 2 GB (<code class="inline">byte[]</code> array index limit)</td>
+              <td>Up to <strong>5 TiB</strong> (Google Cloud Storage maximum object size)</td>
+            </tr>
+            <tr>
+              <td><strong>Underlying GCS Protocol</strong></td>
+              <td>Single-shot multipart request (fails completely if connection drops at 99%)</td>
+              <td>Native <strong>GCS Resumable Upload Session</strong> &amp; HTTP <code class="inline">Range</code> streaming</td>
+            </tr>
+            <tr>
+              <td><strong>Random-Access Byte Offset Seeking</strong></td>
+              <td>Impossible (must download entire object from byte 0)</td>
+              <td>Native via <code class="inline">readChannel.seek(byteOffset)</code> and <code class="inline">fileChannel.position(byteOffset)</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. Example 1: Constant-Memory Upload from Local <code class="inline">FileChannel</code> to GCS <code class="inline">WriteChannel</code> (Every Line Explained)</h3>
+      <p>This service method transfers a multi-gigabyte file from local disk to Google Cloud Storage using <code class="inline">java.nio.channels.FileChannel</code> and <code class="inline">com.google.cloud.WriteChannel</code> with an off-heap direct <code class="inline">ByteBuffer</code>:</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — FileChannelUploadService.java (EVERY LINE EXPLAINED)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>package com.soham.cloud.channels; // Package namespace
+
+import com.google.cloud.WriteChannel; // GCS NIO WritableByteChannel that manages a resumable upload session
+import com.google.cloud.storage.BlobId; // Identifies (bucketName, objectName)
+import com.google.cloud.storage.BlobInfo; // Holds object metadata (Content-Type)
+import com.google.cloud.storage.Storage; // Thread-safe GCS client interface
+import org.springframework.stereotype.Service; // Registers this class as a Spring Service bean
+
+import java.io.IOException; // Standard I/O exception
+import java.nio.ByteBuffer; // Fixed-size NIO memory buffer used to shuttle bytes between channels
+import java.nio.channels.FileChannel; // Java NIO channel for high-performance local disk file I/O
+import java.nio.file.Path; // Represents a local OS file path
+import java.nio.file.StandardOpenOption; // Specifies how the local file should be opened (READ, WRITE, CREATE)
+
+@Service // Marks as a Spring-managed component
+public class FileChannelUploadService {
+
+    private final Storage storage; // Injected Google Cloud Storage client
+
+    public FileChannelUploadService(Storage storage) {
+        this.storage = storage; // Constructor injection
+    }
+
+    /**
+     * Streams a large local file to GCS using FileChannel -> ByteBuffer -> WriteChannel
+     */
+    public long streamLocalFileToGcs(String bucketName, String objectName, Path localFilePath) throws IOException {
+        // 1. Construct the target object identifier and metadata
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType("application/octet-stream") // Binary stream MIME type
+                .build();
+
+        // 2. Open the local file as a Java NIO FileChannel in READ mode, and open a GCS WriteChannel
+        // Both channels implement AutoCloseable, so try-with-resources guarantees they close cleanly!
+        try (FileChannel localFileChannel = FileChannel.open(localFilePath, StandardOpenOption.READ);
+             WriteChannel gcsWriteChannel = storage.writer(blobInfo)) { // Initiates a GCS resumable session under the hood
+
+            // 3. Configure the GCS WriteChannel chunk size to 2 MB (must be a multiple of 256 KB)
+            gcsWriteChannel.setChunkSize(2 * 1024 * 1024);
+
+            // 4. Allocate a 64 KB off-heap Direct ByteBuffer (avoids extra copying between OS kernel and JVM heap)
+            ByteBuffer buffer = ByteBuffer.allocateDirect(64 * 1024);
+
+            long totalBytesTransferred = 0L; // Counter to track total uploaded bytes
+
+            // 5. Read chunks from local FileChannel into the ByteBuffer until EOF (-1) is reached
+            while (localFileChannel.read(buffer) != -1) {
+                // Flip the buffer from 'write mode' (reading from disk) to 'read mode' (draining to GCS)
+                buffer.flip();
+
+                // Ensure all bytes currently in the buffer are drained into the GCS WriteChannel
+                while (buffer.hasRemaining()) {
+                    totalBytesTransferred += gcsWriteChannel.write(buffer); // Writes bytes to the GCS channel
+                }
+
+                // Clear the buffer (resets position to 0) so it can be reused for the next 64 KB disk read
+                buffer.clear();
+            }
+
+            // When the try-with-resources block exits, gcsWriteChannel.close() is called automatically,
+            // which flushes the final resumable chunk and atomically commits the object in GCS!
+            return totalBytesTransferred;
+        }
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. Example 2: Random-Access Range Download &amp; Pause/Resume with <code class="inline">ReadChannel.seek()</code> &amp; <code class="inline">RestorableState</code></h3>
+      <p>Below we show how <code class="inline">ReadChannel</code> combines with <code class="inline">FileChannel</code> to resume a partial download from a specific byte offset without re-downloading earlier bytes, and how <code class="inline">RestorableState&lt;WriteChannel&gt;</code> checkpoints an upload:</p>
+
+      <div class="code-editor">
+        <div class="code-header">
+          <span class="code-lang">JAVA — FileChannelRangeDownloadAndResume.java (EVERY LINE EXPLAINED)</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+        <pre><code>package com.soham.cloud.channels;
+
+import com.google.cloud.ReadChannel; // GCS NIO ReadableByteChannel supporting random-access seek()
+import com.google.cloud.RestorableState; // Serializable state snapshot of an active GCS channel
+import com.google.cloud.WriteChannel; // GCS NIO WritableByteChannel
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+
+@Service
+public class FileChannelRangeDownloadAndResume {
+
+    private final Storage storage;
+
+    public FileChannelRangeDownloadAndResume(Storage storage) {
+        this.storage = storage;
+    }
+
+    /**
+     * 1. RESUMABLE / PARTIAL RANGE DOWNLOAD USING ReadChannel.seek() + FileChannel.position()
+     * If a 2 GB download crashed after writing 500 MB to disk, this resumes directly at byte 500 MB!
+     */
+    public long resumeDownloadToLocalFile(String bucketName, String objectName, Path localTargetFile) throws IOException {
+        BlobId blobId = BlobId.of(bucketName, objectName); // Identifies the cloud object to download
+
+        // Open the local file with CREATE and WRITE options so we can append at the existing byte length
+        try (FileChannel localFileChannel = FileChannel.open(
+                localTargetFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+             ReadChannel gcsReadChannel = storage.reader(blobId)) { // Opens a lazy NIO read stream to GCS
+
+            // Determine how many bytes already exist in the local partial file on disk
+            long existingLocalBytes = localFileChannel.size();
+
+            // Move the local FileChannel write pointer to the end of the already-downloaded bytes
+            localFileChannel.position(existingLocalBytes);
+
+            // CRITICAL: Instruct GCS ReadChannel to seek directly to that exact byte offset in the cloud!
+            // Under the hood, GCS ReadChannel sends an HTTP 'Range: bytes=<existingLocalBytes>-' request!
+            gcsReadChannel.seek(existingLocalBytes);
+
+            // Allocate a reusable 64 KB buffer to stream the remaining bytes
+            ByteBuffer buffer = ByteBuffer.allocateDirect(64 * 1024);
+            long newlyDownloadedBytes = 0L;
+
+            // Stream from GCS ReadChannel straight into the local FileChannel
+            while (gcsReadChannel.read(buffer) != -1) {
+                buffer.flip(); // Prepare buffer for draining to disk
+                while (buffer.hasRemaining()) {
+                    newlyDownloadedBytes += localFileChannel.write(buffer); // Appends to local file
+                }
+                buffer.clear(); // Reset buffer for next network read
+            }
+
+            // Force OS filesystem buffers to flush to physical disk for durability
+            localFileChannel.force(true);
+            return newlyDownloadedBytes;
+        }
+    }
+
+    /**
+     * 2. CHECKPOINTING AN UPLOAD SESSION WITH RestorableState&lt;WriteChannel&gt;
+     * Demonstrates how to pause a WriteChannel, serialize its state, and restore it after an interruption.
+     */
+    public RestorableState&lt;WriteChannel&gt; uploadChunkAndCaptureState(
+            BlobInfo blobInfo, Path localPath, long chunkBytesToUpload) throws IOException {
+
+        // Initiate a new resumable WriteChannel without auto-closing it (closing finalizes the object!)
+        WriteChannel writer = storage.writer(blobInfo);
+        writer.setChunkSize(256 * 1024); // Minimum 256 KB resumable chunk alignment
+
+        try (FileChannel fileChannel = FileChannel.open(localPath, StandardOpenOption.READ)) {
+            ByteBuffer buffer = ByteBuffer.allocate((int) chunkBytesToUpload); // Buffer for first chunk
+            fileChannel.read(buffer); // Read first chunk from local disk
+            buffer.flip(); // Switch buffer to read mode
+            writer.write(buffer); // Transmit first chunk to GCS resumable session
+        }
+
+        // Capture and return the serializable state! You can save this object to disk/Redis and later call:
+        // WriteChannel restoredWriter = savedState.restore(); to continue from the exact byte offset!
+        return writer.capture();
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 6: INTERACTIVE LAB CHECKLIST & 20 ACCORDION FAQs ==================== -->
+  <section id="tab-faq-lab" class="tab-pane">
+    <div class="hero-banner">
+      <div>
+        <h2>Module 6: Guided Hands-On Verification Lab &amp; 20 Deep-Dive Accordion FAQs</h2>
+        <p>Step-by-Step Practical Checklist and Architectural Q&amp;As (Hidden by Default)</p>
+      </div>
+      <div class="badge-group">
+        <span class="badge">7-Step Practical Lab</span>
+        <span class="badge">20 Curated Q&amp;As</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Part A: Hands-On Signed URL, CORS &amp; FileChannel Verification Lab</h3>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700;">
+          <span>Lab Progress</span>
+          <span id="labProgressText">0 / 7 Completed (0%)</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div id="labProgressBar" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div><strong>Step 1:</strong> Create Service Account <code class="inline">gcs-bucket-url-signer</code> and bind <code class="inline">roles/storage.objectUser</code> on <code class="inline">gs://soham-sg</code>.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 2:</strong> Bind <code class="inline">roles/iam.serviceAccountTokenCreator</code> to your user account and wait 90 seconds for IAM propagation.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 3:</strong> Generate a 5-minute V4 Signed GET URL for <code class="inline">gs://soham-sg/sample-text.txt</code> via <code class="inline">gcloud storage sign-url</code> and test in an Incognito browser tab.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 4:</strong> Create <code class="inline">cors.json</code> allowing <code class="inline">http://localhost:8080</code> and <code class="inline">PUT/GET/POST/OPTIONS</code>, and apply via <code class="inline">gcloud storage buckets update gs://soham-sg --cors-file=cors.json</code>.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 5:</strong> Verify CORS preflight headers using <code class="inline">curl -i -X OPTIONS</code> with <code class="inline">Origin: http://localhost:8080</code>.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 6:</strong> Start the Spring Boot Microservice (<code class="inline">SignedUrlController</code>) and test uploading a file directly from the browser via <code class="inline">fetch(signedUrl, { method: 'PUT' })</code>.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+      <div class="lab-step">
+        <div><strong>Step 7:</strong> Test streaming a large local file via <code class="inline">FileChannel</code> &rarr; <code class="inline">WriteChannel</code> and partial range download via <code class="inline">ReadChannel.seek()</code>.</div>
+        <label><input type="checkbox" class="lab-chk" onchange="updateLabProgress()"> Done</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Part B: 20 Deep-Dive Technical FAQs (Click to Reveal Answers)</h3>
+      <div class="filter-bar">
+        <input type="text" id="faqSearch" class="search-input" placeholder="🔍 Search 20 FAQs (e.g., 'CORS', 'JSON key', '308', 'FileChannel', 'OutOfMemoryError', 'Content-Type')..." oninput="filterFAQs()">
+        <button class="action-btn" onclick="toggleAllFAQs(true)">Expand All</button>
+        <button class="action-btn secondary" onclick="toggleAllFAQs(false)">Collapse All</button>
+      </div>
+      <div id="faqList" class="accordion-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<a href="mailto:sohamsironline@gmail.com?subject=GCS%20Signed%20URL%20%26%20FileChannel%20Lab%20Query" class="fab">
+  ✉️ Ask Soham Sir
+</a>
+
+<footer>
+  GCS Signed URLs, CORS, Resumable Streams &amp; Java NIO FileChannel Masterclass &bull; Curated by <strong>Prof. Soham Sengupta</strong>
+</footer>
+
+<script>
+  function openTab(evt, tabId) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const next = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    body.setAttribute('data-theme', next);
+    document.getElementById('themeIcon').textContent = next === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeText').textContent = next === 'dark' ? 'Light' : 'Dark';
+  }
+
+  function setAccent(color, el) {
+    document.body.setAttribute('data-accent', color);
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  let currentFontSize = 16;
+  function changeFontSize(delta) {
+    currentFontSize = Math.min(22, Math.max(13, currentFontSize + delta));
+    document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+  }
+
+  function changeFontFamily(fontVal) {
+    document.documentElement.style.setProperty('--font-main', fontVal);
+  }
+
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(e => alert(e.message));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function copyCode(btn) {
+    const text = btn.closest('.code-editor').querySelector('pre').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  function updateLabProgress() {
+    const checks = document.querySelectorAll('.lab-chk');
+    const done = Array.from(checks).filter(c => c.checked).length;
+    const pct = Math.round((done / checks.length) * 100);
+    document.getElementById('labProgressBar').style.width = pct + '%';
+    document.getElementById('labProgressText').textContent = `${done} / ${checks.length} Completed (${pct}%)`;
+  }
+
+  const faqs = [
+    { q: "Why can't my personal Gmail account sign a GCS URL directly without a Service Account?", a: "V4 Signed URLs require an RSA cryptographic private key (GOOG4-RSA-SHA256). Human user OAuth sessions created via 'gcloud auth login' do not possess an RSA private key; only Service Accounts have managed key pairs associated with them." },
+    { q: "What is the difference between signing a URL with '--impersonate-service-account' vs '--private-key-file'?", a: "'--impersonate-service-account' calls the Google IAM Credentials 'signBlob' API over HTTPS so Google's hardware security modules sign the URL without you ever downloading a private key file. '--private-key-file' reads a downloaded Service Account JSON key from your local disk and signs the hash in local CPU memory." },
+    { q: "Where should a Service Account JSON key be stored during local development, and why is it bad practice in production?", a: "In local development, store it in a restricted folder outside your Git repository (e.g., ~/.gcp-keys/ with chmod 600) and reference it via GOOGLE_APPLICATION_CREDENTIALS. In production, static JSON keys are an anti-pattern because they never expire automatically and can be leaked via Git commits or container images. Production workloads on GCP should use attached Service Accounts with keyless IAM 'signBlob' or Secret Manager." },
+    { q: "What is the maximum expiration duration allowed for a V4 Signed URL?", a: "The maximum expiration time for a V4 Signed URL is 7 days (604,800 seconds) when signed with a Service Account JSON private key. When signed using temporary IAM impersonated tokens, the maximum lifespan is bounded by the token's lifetime (up to 12 hours)." },
+    { q: "Why does a PUT Signed URL work in curl/Postman, but fail with a CORS error in my React/JavaScript browser app?", a: "Browsers enforce the Same-Origin Policy. When JavaScript on 'http://localhost:3000' sends a PUT request to 'https://soham-sg.storage.googleapis.com', the browser first sends an HTTP OPTIONS preflight request. Unless your GCS bucket has a CORS policy configured allowing that origin, method (PUT), and Content-Type header, the browser blocks the upload." },
+    { q: "Why did GCS return '403 Forbidden (SignatureDoesNotMatch)' when my JavaScript client uploaded a file to a valid PUT Signed URL?", a: "When Spring Boot signs a PUT URL using 'SignUrlOption.withContentType()', the exact Content-Type (e.g., 'application/pdf') is baked into the cryptographic signature. If the browser's fetch() call omits the 'Content-Type' header or sends a slightly different value, the signature check fails with 403 SignatureDoesNotMatch." },
+    { q: "If I configure CORS on my bucket, does that make my private bucket public?", a: "No! CORS is strictly a browser cross-origin relaxation mechanism, not an authorization mechanism. Private objects still require a valid Signed URL or OAuth bearer token to be read or written." },
+    { q: "Why is setting 'origin: [\"*\"]' in cors.json discouraged on production buckets that accept uploads?", a: "Allowing '*' permits malicious third-party websites opened in a user's browser to issue cross-origin requests against your bucket endpoints if they obtain a signed link or token. Always whitelist only your specific frontend application origins." },
+    { q: "Is a resumable upload managed by GCS itself, or must my Spring Boot API manage the byte chunks?", a: "It is a split responsibility: Spring Boot only handles the Control Plane (initiating the session or signing the POST initiation URL with 'x-goog-resumable: start'). Once initiated, GCS itself manages the 7-day session state and byte offsets on the backend, while the browser JS client (or Java WriteChannel) slices and sends the byte chunks directly to the GCS Session URI." },
+    { q: "What HTTP status code does GCS return when a resumable upload chunk succeeds, or when you query the Session URI for progress?", a: "GCS returns 'HTTP 308 Resume Incomplete' along with a 'Range: bytes=0-<last_committed_byte>' response header for every intermediate chunk and progress query, and finally returns 'HTTP 200 OK' (or 201 Created) when the final byte is committed." },
+    { q: "What chunk size alignment rule does Google Cloud Storage enforce for resumable uploads?", a: "Every intermediate upload chunk sent to a GCS resumable Session URI (and any chunk size passed to 'WriteChannel.setChunkSize()') MUST be a multiple of 256 KiB (262,144 bytes), except for the final chunk which can be any size." },
+    { q: "Does a client need a new Signed URL if its internet disconnects halfway through a 2-hour resumable upload?", a: "No! Once the initial POST request creates the Resumable Session URI (the 'Location' header containing 'upload_id=...'), that Session URI acts as a self-authenticated capability URL valid for 7 days, even if the original 15-minute POST Signed URL has expired." },
+    { q: "How does resumable download work in GCS, and does Spring Boot need special code for it?", a: "GCS natively supports standard HTTP Range requests ('Range: bytes=start-end') on any GET Signed URL, returning 'HTTP 206 Partial Content'. Spring Boot does not need any special code—the client simply passes the 'Range' header on the existing GET Signed URL." },
+    { q: "What core problem do Java NIO FileChannel, WriteChannel, and ReadChannel solve compared to byte[] arrays?", a: "They solve JVM Heap exhaustion (OutOfMemoryError). Calling 'storage.create(blobInfo, byte[])' or 'storage.readAllBytes()' loads the entire file into RAM at once. Channel APIs stream files of any size (up to 5 TB) through a small, fixed-size 64 KB ByteBuffer, keeping RAM consumption constant." },
+    { q: "Why did we call 'ByteBuffer.allocateDirect(64 * 1024)' in our FileChannel upload service?", a: "'allocateDirect()' allocates the buffer in off-heap native OS memory rather than the garbage-collected JVM Heap. When paired with Java NIO FileChannel and socket channels, the OS kernel can transfer data directly without copying bytes back and forth into JVM heap space." },
+    { q: "Why is 'buffer.flip()' required between reading from a FileChannel and writing to a GCS WriteChannel?", a: "When 'fileChannel.read(buffer)' finishes, the ByteBuffer's 'position' points to the end of the bytes just written into the buffer. Calling 'buffer.flip()' sets 'limit = position' and resets 'position = 0' so that 'gcsWriteChannel.write(buffer)' reads from the start of the buffer up to the exact number of bytes read." },
+    { q: "What happens if you forget to call 'gcsWriteChannel.close()' (or omit try-with-resources) after writing all bytes?", a: "The object will never appear in your GCS bucket! A GCS WriteChannel buffers data into a resumable upload session and only finalizes/commits the object when 'close()' is invoked." },
+    { q: "How does 'gcsReadChannel.seek(existingLocalBytes)' optimize resuming a large download in Java?", a: "Instead of downloading and discarding the first N bytes over the network, 'seek(offset)' updates the channel's internal offset so the next 'read(buffer)' sends an HTTP 'Range: bytes=offset-' request to GCS, transferring only the missing tail of the file." },
+    { q: "How can a backend Java worker pause a 50 GB GCS upload before a server reboot and resume it afterward?", a: "By calling 'RestorableState<WriteChannel> state = writer.capture()' after flushing a chunk, serializing that 'state' object to persistent storage (like Redis or PostgreSQL), and calling 'WriteChannel restored = state.restore()' after the reboot to resume from the exact committed byte offset." },
+    { q: "Can I restrict the maximum file size a user is allowed to upload via a V4 PUT Signed URL?", a: "Yes! Include the extension header 'x-goog-content-length-range' (e.g., '0,10485760' for 0 to 10 MB) inside 'SignUrlOption.withExtHeaders()' when generating the Signed URL in Spring Boot. GCS will reject any upload outside that byte range." }
+  ];
+
+  function renderFAQs() {
+    const container = document.getElementById('faqList');
+    container.innerHTML = faqs.map((item, idx) => `
+      <div class="accordion-item faq-item" data-text="${(item.q + ' ' + item.a).toLowerCase()}">
+        <button class="accordion-btn" onclick="this.parentElement.classList.toggle('active')">
+          <span><span class="q-num">Q${idx + 1}</span> ${item.q}</span>
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-panel">
+          <strong>Answer:</strong> ${item.a}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterFAQs() {
+    const q = document.getElementById('faqSearch').value.toLowerCase();
+    document.querySelectorAll('#faqList .faq-item').forEach(el => {
+      el.style.display = el.getAttribute('data-text').includes(q) ? 'block' : 'none';
+    });
+  }
+
+  function toggleAllFAQs(expand) {
+    document.querySelectorAll('#faqList .faq-item').forEach(el => {
+      if (el.style.display !== 'none') {
+        el.classList.toggle('active', expand);
+      }
+    });
+  }
+
+  renderFAQs();
+</script>
+
+</body>
+</html>
