@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Query Execution, EXPLAIN &amp; Optimization Lab</title>
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #2563eb;
+            --accent-secondary: #1d4ed8;
+            --accent-soft: #dbeafe;
+            --border-color: #e2e8f0;
+            --code-bg: #0f172a;
+            --code-text: #e2e8f0;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --base-font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-soft: rgba(59, 130, 246, 0.15);
+            --border-color: #374151;
+            --code-bg: #030712;
+            --code-text: #e5e7eb;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="sepia"] {
+            --bg-primary: #f4ecd8;
+            --bg-secondary: #fdf6e3;
+            --bg-tertiary: #eee8d5;
+            --text-primary: #433422;
+            --text-secondary: #65533c;
+            --accent-primary: #b58900;
+            --accent-secondary: #cb4b16;
+            --accent-soft: #e8dfca;
+            --border-color: #d3cbb7;
+            --code-bg: #002b36;
+            --code-text: #839496;
+            --success: #859900;
+            --warning: #b58900;
+            --danger: #dc322f;
+            --shadow: 0 4px 6px -1px rgba(67, 52, 34, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--base-font-size);
+            line-height: 1.6;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 0.75rem 1.5rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .brand span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn.active, .btn-primary {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            border-color: var(--accent-primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-secondary);
+            color: #ffffff;
+        }
+
+        nav.tabs-nav {
+            max-width: 1440px;
+            margin: 0.75rem auto 0;
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.75rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-soft);
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        main {
+            max-width: 1440px;
+            margin: 1.5rem auto;
+            padding: 0 1.5rem;
+            min-height: calc(100vh - 210px);
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .module-layout {
+            display: grid;
+            grid-template-columns: 270px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .sub-menu {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            position: sticky;
+            top: 130px;
+            box-shadow: var(--shadow);
+        }
+
+        .sub-menu-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            font-weight: 700;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .sub-nav-btn {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.65rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+            transition: all 0.15s ease;
+        }
+
+        .sub-nav-btn:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .sub-nav-btn.active {
+            background-color: var(--accent-soft);
+            color: var(--accent-primary);
+            font-weight: 600;
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .sub-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .sub-panel.active {
+            display: block;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .section-header h2 {
+            font-size: 1.65rem;
+            color: var(--text-primary);
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow);
+        }
+
+        .card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .card h4 {
+            font-size: 1rem;
+            margin: 1rem 0 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .badge {
+            font-size: 0.72rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-easy, .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-medium, .badge-warning { background: rgba(234, 179, 8, 0.15); color: var(--warning); border: 1px solid rgba(234, 179, 8, 0.3); }
+        .badge-hard, .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-info { background: var(--accent-soft); color: var(--accent-primary); border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            margin: 0.75rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            background-color: var(--bg-tertiary);
+            padding: 0.15rem 0.35rem;
+            border-radius: 0.25rem;
+            font-size: 0.88em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        .diagram-box {
+            background-color: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-size: 0.82em;
+            color: var(--text-primary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-secondary);
+            text-align: left;
+        }
+
+        th, td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: var(--bg-tertiary); }
+
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin-bottom: 0.4rem; }
+
+        .callout {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--accent-primary);
+            background-color: var(--bg-tertiary);
+        }
+
+        .callout.warn { border-left-color: var(--warning); }
+        .callout.danger { border-left-color: var(--danger); }
+        .callout.success { border-left-color: var(--success); }
+
+        /* Single-Screen Assignment Arena */
+        .arena-wrapper {
+            min-height: calc(100vh - 230px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.75rem;
+            box-shadow: var(--shadow);
+        }
+
+        .arena-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .arena-progress {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .arena-stage {
+            flex: 1;
+            margin: 1.5rem 0;
+        }
+
+        .question-card-item {
+            display: none;
+            flex-direction: column;
+            gap: 1.25rem;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .question-card-item.active {
+            display: flex;
+        }
+
+        .question-box {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .question-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .reveal-controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .reveal-box {
+            display: none;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .reveal-box.hint-box { border-left-color: var(--warning); }
+        .reveal-box.solution-box { border-left-color: var(--success); }
+        .reveal-box.visible { display: block; }
+
+        .arena-footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .dot-indicators {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .q-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .q-dot.active {
+            background: var(--accent-primary);
+            color: #fff;
+            border-color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        footer {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 3rem;
+        }
+
+        footer strong { color: var(--text-primary); }
+
+        @media print {
+            header, .controls, nav.tabs-nav, .sub-menu, .arena-top-bar, .arena-footer-nav, .reveal-controls {
+                display: none !important;
+            }
+            .module-layout { grid-template-columns: 1fr; }
+            .tab-panel, .sub-panel, .question-card-item, .reveal-box {
+                display: block !important;
+                page-break-after: always;
+            }
+            body { background: #fff; color: #000; }
+        }
+
+        @media (max-width: 960px) {
+            .module-layout { grid-template-columns: 1fr; }
+            .sub-menu {
+                position: static;
+                display: flex;
+                overflow-x: auto;
+                gap: 0.4rem;
+                padding: 0.5rem;
+            }
+            .sub-menu-title { display: none; }
+            .sub-nav-btn { width: auto; white-space: nowrap; margin-bottom: 0; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <div class="brand">
+            <h1>Database Query Execution, EXPLAIN &amp; Optimization Lab</h1>
+            <span>Hands-On Workbench for DBeaver, PostgreSQL &amp; MySQL • Weighing Cost, Buffers, Scans &amp; SARGability</span>
+        </div>
+        <div class="controls">
+            <button type="button" class="btn" data-theme-target="light" id="theme-light">☀️ Light</button>
+            <button type="button" class="btn active" data-theme-target="dark" id="theme-dark">🌙 Dark</button>
+            <button type="button" class="btn" data-theme-target="sepia" id="theme-sepia">📜 Sepia</button>
+            <button type="button" class="btn" id="btn-font-dec">A-</button>
+            <button type="button" class="btn" id="btn-font-inc">A+</button>
+            <button type="button" class="btn" id="btn-speech">🔊 Read Aloud</button>
+            <button type="button" class="btn" id="btn-print">🖨️ Print</button>
+            <button type="button" class="btn" id="btn-fullscreen">⛶ Fullscreen</button>
+        </div>
+    </div>
+    <nav class="tabs-nav">
+        <button type="button" class="tab-btn active" data-tab-target="tab-lab-setup">1. Local Lab &amp; DBeaver Setup</button>
+        <button type="button" class="tab-btn" data-tab-target="tab-explain">2. Anatomy of EXPLAIN &amp; Weighing Cost</button>
+        <button type="button" class="tab-btn" data-tab-target="tab-tricks">3. Optimization Tricks vs. Anti-Patterns</button>
+        <button type="button" class="tab-btn" data-tab-target="tab-arena">4. Interactive Assignments Arena (Easy • Med • Hard)</button>
+    </nav>
+</header>
+
+<main id="main-content">
+
+    <!-- ==================== TAB 1: LOCAL LAB & DBEAVER SETUP ==================== -->
+    <section id="tab-lab-setup" class="tab-panel active">
+        <div class="module-layout">
+            <aside class="sub-menu">
+                <div class="sub-menu-title">Lab Setup Menu</div>
+                <button type="button" class="sub-nav-btn active" data-sub-target="setup-schema">1.1 Schema &amp; Seed Script <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="setup-mysql">1.2 MySQL 8+ Equivalent <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="setup-dbeaver">1.3 DBeaver Visual Profiler <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="setup-stats">1.4 ANALYZE &amp; Cache Warmup <span>›</span></button>
+            </aside>
+
+            <div class="sub-content">
+                <div id="setup-schema" class="sub-panel active">
+                    <div class="section-header">
+                        <h2>1.1 PostgreSQL Sandbox: Generating 1,000,000 Realistic Rows</h2>
+                        <p>Small tables (100 rows) lie to you—the Cost-Based Optimizer (CBO) will always pick a Sequential Scan because everything fits inside a single 8KB disk page. Run this script in DBeaver to build a high-cardinality dataset in 3 seconds.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Step 1: Create Tables (Intentionally Unindexed First) <span class="badge badge-info">PostgreSQL DDL</span></h3>
+                        <p>We create a <code>customers</code> table (100k rows) and an <code>orders</code> table (1M rows) with skewed status distributions, JSONB payloads, and timestamps so we can measure real I/O bottlenecks.</p>
+                        <pre><code>-- Drop existing lab tables if re-running
+DROP TABLE IF EXISTS lab_orders;
+DROP TABLE IF EXISTS lab_customers;
+
+CREATE TABLE lab_customers (
+    customer_id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(150) NOT NULL,
+    region VARCHAR(30) NOT NULL,
+    tier VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE lab_orders (
+    order_id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    order_status VARCHAR(20) NOT NULL,
+    total_amount NUMERIC(10, 2) NOT NULL,
+    order_code VARCHAR(40) NOT NULL,
+    metadata JSONB,
+    created_at TIMESTAMP NOT NULL
+);</code></pre>
+                    </div>
+
+                    <div class="card">
+                        <h3>Step 2: Seed 100k Customers &amp; 1M Orders via <code>generate_series</code> <span class="badge badge-success">Fast Bulk Seed</span></h3>
+                        <p>Notice how we engineer <strong>data skew</strong>: 94% of orders are <code>COMPLETED</code>, 5% are <code>CANCELLED</code>, and only 1% are <code>PENDING</code>. This is critical for testing Partial Indexes later.</p>
+                        <pre><code>-- 1. Insert 100,000 Customers
+INSERT INTO lab_customers (email, region, tier, created_at)
+SELECT 
+    'user_' || g || '@enterprise-lab.io',
+    (ARRAY['APAC', 'EMEA', 'NA', 'LATAM'])[1 + (g % 4)],
+    CASE WHEN g % 20 = 0 THEN 'VIP' WHEN g % 5 = 0 THEN 'GOLD' ELSE 'STANDARD' END,
+    NOW() - (g || ' minutes')::INTERVAL
+FROM generate_series(1, 100000) AS g;
+
+-- 2. Insert 1,000,000 Orders with realistic skew
+INSERT INTO lab_orders (customer_id, order_status, total_amount, order_code, metadata, created_at)
+SELECT 
+    1 + (random() * 99999)::BIGINT,
+    CASE 
+        WHEN g % 100 = 0 THEN 'PENDING'      -- 1% (High selectivity)
+        WHEN g % 20 = 0  THEN 'CANCELLED'    -- 5%
+        ELSE 'COMPLETED'                     -- 94% (Low selectivity / High skew)
+    END,
+    ROUND((10 + random() * 990)::NUMERIC, 2),
+    'ORD-' || LPAD(g::TEXT, 8, '0'),
+    jsonb_build_object('channel', CASE WHEN g % 3 = 0 THEN 'MOBILE' ELSE 'WEB' END, 'priority', g % 5),
+    NOW() - ((random() * 525600)::INT || ' minutes')::INTERVAL
+FROM generate_series(1, 1000000) AS g;
+
+-- 3. Update Optimizer Statistics immediately
+ANALYZE lab_customers;
+ANALYZE lab_orders;</code></pre>
+                    </div>
+                </div>
+
+                <div id="setup-mysql" class="sub-panel">
+                    <div class="section-header">
+                        <h2>1.2 MySQL 8.0+ Sandbox Setup &amp; Architectural Differences</h2>
+                        <p>How MySQL's InnoDB engine differs physically from PostgreSQL's Heap storage, and how to run the lab on MySQL.</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>PostgreSQL Heap vs. MySQL InnoDB Clustered Index</h3>
+                            <ul>
+                                <li><strong>PostgreSQL (Heap Tuples):</strong> Table rows live in an unordered <em>Heap</em>. Every index (even the Primary Key) is a secondary B-Tree pointing to a physical <code>ctid</code> (Page + Tuple slot).</li>
+                                <li><strong>MySQL InnoDB (Clustered B-Tree):</strong> The table <em>is</em> the Primary Key B-Tree. Leaf nodes of the PK contain the actual row data. Secondary indexes store the <strong>Primary Key value</strong>, requiring a double B-Tree lookup on cache misses!</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h3>MySQL 8+ Recursive CTE Generator</h3>
+                            <pre><code>SET SESSION cte_max_recursion_depth = 1000000;
+
+INSERT INTO lab_customers (email, region, tier, created_at)
+WITH RECURSIVE seq AS (
+    SELECT 1 AS g UNION ALL SELECT g + 1 FROM seq WHERE g &lt; 100000
+)
+SELECT 
+    CONCAT('user_', g, '@enterprise-lab.io'),
+    ELT(1 + (g % 4), 'APAC', 'EMEA', 'NA', 'LATAM'),
+    IF(g % 20 = 0, 'VIP', 'STANDARD'),
+    NOW() - INTERVAL g MINUTE
+FROM seq;</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="setup-dbeaver" class="sub-panel">
+                    <div class="section-header">
+                        <h2>1.3 Mastering DBeaver for Query Execution Analysis</h2>
+                        <p>Configuring DBeaver so you don't get fooled by client-side auto-limits or hidden network fetch times.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Critical DBeaver Settings for Accurate Benchmarking <span class="badge badge-warning">Must Configure</span></h3>
+                        <ol>
+                            <li><strong>Use <code>EXPLAIN (ANALYZE, BUFFERS)</code> in the SQL Editor:</strong> By default, DBeaver wraps plain <code>SELECT</code> queries or halts cursor fetching at 200 rows. Prefixing with <code>EXPLAIN (ANALYZE, BUFFERS)</code> forces the server to execute the full query and report true engine metrics.</li>
+                            <li><strong>Keyboard Shortcut for Visual Plan:</strong> Highlight any SQL query in DBeaver and press <code>Ctrl + Shift + E</code> (or click the <strong>Explain Execution Plan</strong> icon on the left vertical toolbar of the SQL Editor).</li>
+                            <li><strong>Reading the DBeaver Plan Tree:</strong> DBeaver renders execution nodes from <strong>innermost (deepest indented child) to outermost (root)</strong>.</li>
+                        </ol>
+                        <div class="diagram-box">DBeaver SQL Editor Toolbar:
+  [ ▶ Execute SQL (Ctrl+Enter) ]
+  [ 📜 Execute Script (Alt+X)   ]
+  [ 📊 Explain Execution Plan (Ctrl+Shift+E) ]  &lt;-- Check "ANALYZE" &amp; "BUFFERS" in popup!</div>
+                    </div>
+                </div>
+
+                <div id="setup-stats" class="sub-panel">
+                    <div class="section-header">
+                        <h2>1.4 The Optimizer's Brain: Statistics &amp; Buffer Cache Physics</h2>
+                        <p>Why running the exact same query twice yields 450ms the first time and 12ms the second time.</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Cold Cache vs. Warm Shared Buffers</h3>
+                            <p>Never judge an optimization solely by wall-clock milliseconds! The first run pulls 8KB pages from SSD/OS disk cache (<code>Shared Read</code>). The second run reads them directly from RAM (<code>Shared Hit</code>).</p>
+                            <div class="callout success">
+                                <strong>The Golden Rule of Weighing Queries:</strong> Compare the total number of <strong>8KB Buffers touched (<code>shared hit + read</code>)</strong>. A query that touches 4 buffers instead of 14,000 buffers will scale under 500 concurrent users, regardless of single-user millisecond jitter.
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Inspecting What the Planner Knows</h3>
+                            <pre><code>-- Inspect PostgreSQL's internal histogram &amp; cardinality stats
+SELECT 
+    attname AS column_name,
+    n_distinct,
+    most_common_vals,
+    most_common_freqs
+FROM pg_stats
+WHERE tablename = 'lab_orders';</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 2: ANATOMY OF EXPLAIN & WEIGHING COST ==================== -->
+    <section id="tab-explain" class="tab-panel">
+        <div class="module-layout">
+            <aside class="sub-menu">
+                <div class="sub-menu-title">EXPLAIN Anatomy Menu</div>
+                <button type="button" class="sub-nav-btn active" data-sub-target="exp-metrics">2.1 Decoding Cost &amp; Buffers <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="exp-scans">2.2 The 4 Scan Algorithms <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="exp-joins">2.3 The 3 Join Strategies <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="exp-mysql">2.4 MySQL EXPLAIN ANALYZE <span>›</span></button>
+            </aside>
+
+            <div class="sub-content">
+                <div id="exp-metrics" class="sub-panel active">
+                    <div class="section-header">
+                        <h2>2.1 Decoding <code>EXPLAIN (ANALYZE, BUFFERS)</code> Like an Architect</h2>
+                        <p>Every number in an execution plan line tells a specific hardware story about CPU cycles, RAM pages, and disk seeks.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Dissecting a Real PostgreSQL Plan Line <span class="badge badge-info">Line-by-Line Anatomy</span></h3>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS) 
+SELECT * FROM lab_orders WHERE customer_id = 4242;
+
+-- OUTPUT:
+Seq Scan on lab_orders  (cost=0.00..23845.00 rows=10 width=112) (actual time=0.042..84.310 rows=11 loops=1)
+  Filter: (customer_id = 4242)
+  Rows Removed by Filter: 999989
+  Buffers: shared hit=4520 read=9325</code></pre>
+
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Metric Token</th>
+                                        <th>Exact Meaning</th>
+                                        <th>How to Weigh It in Lab</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>cost=0.00..23845.00</code></td>
+                                        <td><strong>Startup Cost .. Total Cost</strong> (Arbitrary planner units, <em>not</em> milliseconds! <code>1.0</code> = reading one sequential 8KB page).</td>
+                                        <td><code>0.00</code> means Seq Scan emits the first row immediately; a Sort node has a high startup cost because it must read all rows before emitting row 1.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>rows=10</code> vs <code>rows=11</code></td>
+                                        <td><strong>Estimated Cardinality</strong> vs <strong>Actual Rows Returned</strong>.</td>
+                                        <td>If estimated is <code>10</code> and actual is <code>50,000</code>, the planner will mistakenly pick a Nested Loop and stall your server!</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>loops=1</code></td>
+                                        <td>How many times this specific node was executed.</td>
+                                        <td><strong>Critical Trap:</strong> Multiply <code>actual time</code> and <code>rows</code> by <code>loops</code>! <code>actual time=0.200 ms loops=5000</code> actually took <strong>1,000 ms (1 full second)</strong>.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>Rows Removed by Filter</code></td>
+                                        <td>Rows pulled from storage into CPU memory only to be discarded by the <code>WHERE</code> clause.</td>
+                                        <td><code>999,989</code> discarded rows for <code>11</code> returned rows means 99.99% wasted I/O. Screams for an index!</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>shared hit=4520 read=9325</code></td>
+                                        <td><strong>8KB Pages from RAM</strong> (<code>hit</code>) vs <strong>8KB Pages from Disk/OS</strong> (<code>read</code>).</td>
+                                        <td><code>(4520 + 9325) * 8KB = ~110.7 MB</code> scanned for a single query. Target under 20 buffers for OLTP point lookups.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="exp-scans" class="sub-panel">
+                    <div class="section-header">
+                        <h2>2.2 Weighing the 4 Access Paths (Scan Types)</h2>
+                        <p>An index is not always faster than a table scan. Understanding when the optimizer switches between these four access paths is key.</p>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Scan Type</th>
+                                    <th>How It Works Physically</th>
+                                    <th>When Optimizer Chooses It</th>
+                                    <th>I/O &amp; Performance Profile</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Sequential Scan</strong><br>(MySQL: <code>type: ALL</code>)</td>
+                                    <td>Streams contiguous 8KB table blocks sequentially from start to finish.</td>
+                                    <td>Query fetches greater than 15-25% of table rows, or no usable index exists.</td>
+                                    <td>Fast sequential disk read, but O(N) scaling. Terrible for small point lookups on large tables.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Index Scan</strong><br>(MySQL: <code>type: ref / range</code>)</td>
+                                    <td>Traverses B-Tree to leaf node, then jumps to the table Heap (random I/O) for every matching row to check MVCC visibility &amp; fetch extra columns.</td>
+                                    <td>High selectivity (less than 1-2% of rows matching) where non-indexed columns are also selected.</td>
+                                    <td>O(log N) lookup. Awesome for 1–500 rows; degrades rapidly if thousands of random heap jumps occur.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Bitmap Index Scan + Bitmap Heap Scan</strong></td>
+                                    <td>Step 1: Scans B-Tree and builds an in-memory bitmask of matching 8KB page numbers.<br>Step 2: Sorts page numbers sequentially and reads each heap page once!</td>
+                                    <td>Medium selectivity (1% to 15% of rows), or combining two separate indexes via <code>BitmapAnd</code> / <code>BitmapOr</code>.</td>
+                                    <td>Eliminates random I/O thrashing! Bridges the gap between Index Scan and Seq Scan.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Index-Only Scan</strong><br>(MySQL: <code>Using index</code>)</td>
+                                    <td>Answers the entire query straight from the B-Tree leaf nodes. <strong>Zero Heap table access</strong> (if Visibility Map confirms pages are all-visible).</td>
+                                    <td>All columns in <code>SELECT</code>, <code>WHERE</code>, and <code>ORDER BY</code> exist inside the index definition (or <code>INCLUDE</code> clause).</td>
+                                    <td>The fastest possible read in RDBMS. Often requires only 3–4 buffer hits total.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="exp-joins" class="sub-panel">
+                    <div class="section-header">
+                        <h2>2.3 Weighing the 3 Physical Join Algorithms</h2>
+                        <p>When joining <code>lab_customers</code> and <code>lab_orders</code>, the database engine picks one of three physical algorithms.</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>1. Nested Loop Join <span class="badge badge-info">Best for Small Outer Rows</span></h3>
+                            <p>For each row in the outer table, look up matching rows in the inner table (ideally via an Index).</p>
+                            <div class="diagram-box">for (Customer c : outerRows) {      // e.g. 5 VIP customers
+    indexLookupOrders(c.id);        // 5 fast B-Tree lookups
+}</div>
+                            <p><strong>Complexity:</strong> <code>O(N * log M)</code> with inner index, or catastrophic <code>O(N * M)</code> without inner index.</p>
+                        </div>
+
+                        <div class="card">
+                            <h3>2. Hash Join <span class="badge badge-success">Best for Large Unsorted Sets</span></h3>
+                            <p>Loads the smaller table into an in-memory Hash Table (inside <code>work_mem</code>), then streams the larger table once, probing the hash map in <code>O(1)</code> time.</p>
+                            <div class="diagram-box">1. Hash Node: Build HashMap from lab_customers (Batches: 1)
+2. Probe: Stream lab_orders &amp; match hash(customer_id)</div>
+                            <p><strong>Red Flag:</strong> Check <code>Batches: 1</code> in EXPLAIN. If <code>Batches &gt; 1</code>, the hash table spilled to disk temp files!</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>3. Merge Join <span class="badge badge-warning">Best for Pre-Sorted / Indexed Streams</span></h3>
+                        <p>Requires both inputs to be sorted on the join key. Advances two pointers in lockstep like a zipper. Extremely fast if both sides are already sorted via B-Tree indexes, and never runs out of memory for huge datasets.</p>
+                    </div>
+                </div>
+
+                <div id="exp-mysql" class="sub-panel">
+                    <div class="section-header">
+                        <h2>2.4 MySQL 8+ <code>EXPLAIN ANALYZE</code> &amp; <code>type</code> Hierarchy</h2>
+                        <p>How to read MySQL's output in DBeaver and rank access types from best to worst.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>MySQL Access <code>type</code> Ranking (Best to Worst)</h3>
+                        <p><code>system / const</code> (1 row PK/Unique) ➔ <code>eq_ref</code> (1-to-1 PK Join) ➔ <code>ref</code> (Non-unique Index lookup) ➔ <code>range</code> (Index range) ➔ <code>index</code> (Full Index Scan) ➔ <code>ALL</code> (Full Table Scan - Danger!).</p>
+                        <pre><code>-- Run in MySQL 8.0.18+ inside DBeaver for PostgreSQL-style actual timings:
+EXPLAIN ANALYZE
+SELECT o.order_id, c.email 
+FROM lab_orders o
+JOIN lab_customers c ON o.customer_id = c.customer_id
+WHERE o.order_code = 'ORD-00050000';</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 3: OPTIMIZATION TRICKS VS ANTI-PATTERNS ==================== -->
+    <section id="tab-tricks" class="tab-panel">
+        <div class="module-layout">
+            <aside class="sub-menu">
+                <div class="sub-menu-title">Tricks &amp; Don'ts Menu</div>
+                <button type="button" class="sub-nav-btn active" data-sub-target="opt-sarg">3.1 SARGability &amp; Functions <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="opt-composite">3.2 Composite &amp; Covering <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="opt-partial">3.3 Partial Indexes (Skew) <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="opt-keyset">3.4 Keyset vs. OFFSET <span>›</span></button>
+                <button type="button" class="sub-nav-btn" data-sub-target="opt-donts">3.5 The 7 Deadly SQL Don'ts <span>›</span></button>
+            </aside>
+
+            <div class="sub-content">
+                <div id="opt-sarg" class="sub-panel active">
+                    <div class="section-header">
+                        <h2>3.1 SARGability (Search Argument Able Queries)</h2>
+                        <p>The #1 reason production indexes are silently ignored: wrapping an indexed column inside a function, math expression, or implicit type cast.</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>❌ DON'T: Non-SARGable (Index Blindness) <span class="badge badge-danger">Seq Scan: 95ms</span></h3>
+                            <p>Because the B-Tree stores raw <code>created_at</code> timestamps, wrapping the column in <code>EXTRACT()</code> or <code>DATE()</code> forces PostgreSQL to evaluate the function on all 1,000,000 rows before comparing.</p>
+                            <pre><code>CREATE INDEX idx_orders_created ON lab_orders(created_at);
+
+-- BAD: Function on left side of operator breaks B-Tree traversal!
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM lab_orders 
+WHERE EXTRACT(YEAR FROM created_at) = 2026;</code></pre>
+                        </div>
+
+                        <div class="card">
+                            <h3>✅ DO: SARGable Range Predicate <span class="badge badge-success">Index Scan: 0.4ms</span></h3>
+                            <p>Always isolate the raw indexed column on one side of the comparison operator and push the math/functions to the constant parameter side.</p>
+                            <pre><code>-- GOOD: Direct B-Tree range seek from start bound to end bound
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM lab_orders 
+WHERE created_at &gt;= '2026-01-01 00:00:00' 
+  AND created_at &lt;  '2027-01-01 00:00:00';</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="opt-composite" class="sub-panel">
+                    <div class="section-header">
+                        <h2>3.2 Composite Column Ordering (ESR Rule) &amp; Covering Indexes</h2>
+                        <p>When creating a multi-column index <code>(A, B, C)</code>, column order determines whether the B-Tree can filter and sort simultaneously.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>The ESR Rule: Equality ➔ Sort ➔ Range <span class="badge badge-info">Architecture Rule</span></h3>
+                        <p>A B-Tree is sorted first by Column 1, then ties are broken by Column 2. The moment you apply a <strong>Range filter (<code>&gt;, &lt;, BETWEEN</code>)</strong> on a column, the B-Tree ordering is broken for any subsequent columns in that index!</p>
+                        <div class="grid-2">
+                            <div>
+                                <h4>❌ Wrong Order: <code>(created_at, customer_id)</code></h4>
+                                <pre><code>-- Range first, Equality second:
+-- Cannot seek directly to customer_id = 500!
+CREATE INDEX idx_bad ON lab_orders (created_at, customer_id);
+
+SELECT * FROM lab_orders
+WHERE customer_id = 500 
+  AND created_at &gt; NOW() - INTERVAL '30 days';</code></pre>
+                            </div>
+                            <div>
+                                <h4>✅ Optimal Order + Covering <code>INCLUDE</code></h4>
+                                <pre><code>-- 1. Equality (customer_id)
+-- 2. Range/Sort (created_at)
+-- 3. Payload (INCLUDE total_amount for Index-Only Scan!)
+CREATE INDEX idx_orders_cust_date_cov 
+ON lab_orders (customer_id, created_at DESC) 
+INCLUDE (total_amount);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT customer_id, created_at, total_amount
+FROM lab_orders
+WHERE customer_id = 500 
+  AND created_at &gt; NOW() - INTERVAL '30 days';</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="opt-partial" class="sub-panel">
+                    <div class="section-header">
+                        <h2>3.3 Partial Indexes: Conquering Data Skew with 99% Less RAM</h2>
+                        <p>Why index 940,000 <code>COMPLETED</code> orders that your active worker queue never queries?</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Full Index on Skewed Column</h3>
+                            <pre><code>CREATE INDEX idx_full_status ON lab_orders(order_status);
+-- Index Size on Disk: ~21 MB (Indexes all 1,000,000 rows)</code></pre>
+                            <p>Every single <code>INSERT</code> or status <code>UPDATE</code> pays the write amplification penalty of maintaining this 21 MB B-Tree.</p>
+                        </div>
+                        <div class="card">
+                            <h3>Partial Index (Filtered B-Tree) <span class="badge badge-success">PostgreSQL Superpower</span></h3>
+                            <pre><code>CREATE INDEX idx_partial_pending_orders 
+ON lab_orders (created_at) 
+WHERE order_status = 'PENDING';
+-- Index Size on Disk: ~240 KB (99% smaller! Fits in L2 CPU Cache)</code></pre>
+                            <p>Queries filtering on <code>WHERE order_status = 'PENDING' ORDER BY created_at</code> execute in <strong>0.05ms</strong> with virtually zero write overhead on completed orders.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="opt-keyset" class="sub-panel">
+                    <div class="section-header">
+                        <h2>3.4 Deep Pagination: Why <code>OFFSET 500000</code> Kills Databases</h2>
+                        <p><code>OFFSET</code> does not skip rows on disk—it forces the database to fetch, materialize, and sort 500,020 rows just to throw the first 500,000 in the trash.</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>❌ DON'T: Offset Pagination <span class="badge badge-danger">O(N) Degradation</span></h3>
+                            <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, order_code, created_at
+FROM lab_orders
+ORDER BY order_id ASC
+LIMIT 20 OFFSET 500000;
+-- Execution Time: ~145 ms | Buffers Touched: 6,200+</code></pre>
+                        </div>
+                        <div class="card">
+                            <h3>✅ DO: Keyset / Seek Pagination <span class="badge badge-success">O(log N) Constant 0.04ms</span></h3>
+                            <pre><code>-- Pass the last seen order_id from the previous page cursor:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, order_code, created_at
+FROM lab_orders
+WHERE order_id &gt; 500000
+ORDER BY order_id ASC
+LIMIT 20;
+-- Execution Time: ~0.04 ms | Buffers Touched: 4</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="opt-donts" class="sub-panel">
+                    <div class="section-header">
+                        <h2>3.5 The 7 Deadly SQL Anti-Patterns Checklist</h2>
+                        <p>A quick diagnostic reference for code reviews and production troubleshooting.</p>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Anti-Pattern (The "Don't")</th>
+                                    <th>Why It Destroys Performance</th>
+                                    <th>The Architect's Fix</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td><code>SELECT *</code> on wide tables with JSONB/TEXT</td>
+                                    <td>Prevents Index-Only Scans, triggers PostgreSQL TOAST table decompression, and saturates network buffers.</td>
+                                    <td>Project strictly required columns so Covering Indexes can satisfy the query.</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td><code>NOT IN (SELECT nullable_col FROM ...)</code></td>
+                                    <td>If a single <code>NULL</code> exists in the subquery, SQL three-valued logic evaluates the entire predicate to <code>UNKNOWN</code> (returns 0 rows).</td>
+                                    <td>Use <code>NOT EXISTS (SELECT 1 FROM ... WHERE ...)</code> which uses a fast Hash Anti-Join and handles NULLs safely.</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td><code>OR</code> conditions across two different columns</td>
+                                    <td><code>WHERE customer_id = 10 OR order_code = 'X'</code> cannot traverse a single B-Tree; forces either a Seq Scan or two separate scans merged via <code>BitmapOr</code>.</td>
+                                    <td>Ensure both columns have individual indexes so <code>BitmapOr</code> works, or rewrite as <code>UNION ALL</code>.</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>Implicit Type Conversion (e.g., <code>WHERE varchar_col = 12345</code>)</td>
+                                    <td>Passing an integer to a VARCHAR column forces the engine to cast every row in the table to a number, disabling the B-Tree index.</td>
+                                    <td>Match Java/JDBC parameter types strictly to SQL column types (<code>'12345'</code>).</td>
+                                </tr>
+                                <tr>
+                                    <td>5</td>
+                                    <td>Unindexed Foreign Keys</td>
+                                    <td>PostgreSQL automatically indexes Primary Keys, <strong>NOT Foreign Keys</strong>. Deleting a parent row in <code>lab_customers</code> triggers a Full Table Scan on <code>lab_orders</code>!</td>
+                                    <td>Always create an explicit B-Tree index on every Foreign Key column.</td>
+                                </tr>
+                                <tr>
+                                    <td>6</td>
+                                    <td>Sorting huge datasets without checking <code>Sort Method</code></td>
+                                    <td>If an <code>ORDER BY</code> exceeds <code>work_mem</code> (default 4MB in PG), it switches from <code>quicksort (Memory)</code> to <code>external merge Disk</code>.</td>
+                                    <td>Provide an index matching the <code>ORDER BY</code> clause or increase session <code>work_mem</code> for reporting queries.</td>
+                                </tr>
+                                <tr>
+                                    <td>7</td>
+                                    <td>Over-Indexing Write-Heavy Tables</td>
+                                    <td>Having 12 indexes on an OLTP table turns 1 logical <code>INSERT</code> into 13 physical page modifications and blocks PostgreSQL HOT updates.</td>
+                                    <td>Drop unused indexes via <code>pg_stat_user_indexes</code> (<code>idx_scan = 0</code>).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 4: SINGLE-SCREEN INTERACTIVE ASSIGNMENTS ARENA ==================== -->
+    <section id="tab-arena" class="tab-panel">
+        <div class="arena-wrapper">
+            <div class="arena-top-bar">
+                <div class="filter-group">
+                    <button type="button" class="btn active" data-filter="ALL">All Challenges (9)</button>
+                    <button type="button" class="btn" data-filter="EASY">🟢 Easy (1-3)</button>
+                    <button type="button" class="btn" data-filter="MEDIUM">🟡 Medium (4-6)</button>
+                    <button type="button" class="btn" data-filter="HARD">🔴 Hard (7-9)</button>
+                </div>
+                <div class="arena-progress" id="arena-counter">Challenge 1 of 9</div>
+            </div>
+
+            <!-- Single-Question Stage (Pure HTML DOM cards, only 1 active at a time) -->
+            <div class="arena-stage" id="arena-stage">
+
+                <!-- CHALLENGE 1 -->
+                <div class="question-card-item active" data-level="EASY" data-qnum="1">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 1: The Unindexed Foreign Key Trap</span>
+                            <span class="badge badge-easy">EASY</span>
+                        </div>
+                        <p>A developer created the <code>lab_orders</code> table referencing <code>customer_id</code>, assuming PostgreSQL automatically indexes foreign key columns. A user opens their order history page.</p>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, order_status, total_amount 
+FROM lab_orders 
+WHERE customer_id = 7777;</code></pre>
+                        <p><strong>Task:</strong> Run this query in DBeaver before and after adding a B-Tree index on <code>customer_id</code>. Record the drop in Shared Buffers and explain why the optimizer switches scan types.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Run the query as-is first. Look at <code>Rows Removed by Filter</code> (~999,990 rows discarded!) and <code>Buffers: shared hit/read</code> (~13,800 pages).</li>
+                            <li>Create the index: <code>CREATE INDEX idx_orders_customer_id ON lab_orders(customer_id);</code></li>
+                            <li>Re-run <code>EXPLAIN (ANALYZE, BUFFERS)</code> and compare the node type and buffer count.</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <p><strong>Before Index:</strong> <code>Parallel Seq Scan on lab_orders (cost=0.00..15600 rows=10) (actual time=45.2ms) | Buffers: shared hit=13845</code>.</p>
+                        <pre><code>CREATE INDEX idx_orders_customer_id ON lab_orders(customer_id);</code></pre>
+                        <p><strong>After Index:</strong> <code>Index Scan using idx_orders_customer_id (cost=0.42..38.55 rows=10) (actual time=0.065ms) | Buffers: shared hit=14</code>.</p>
+                        <p><strong>Verdict:</strong> 99.9% reduction in I/O (13,845 pages down to 14 pages) and ~700x speedup.</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 2 -->
+                <div class="question-card-item" data-level="EASY" data-qnum="2">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 2: The SARGability Date Extraction Bug</span>
+                            <span class="badge badge-easy">EASY</span>
+                        </div>
+                        <p>The finance team runs a daily report looking for all orders placed 10 days ago. Even after indexing <code>created_at</code>, the query takes ~90ms and performs a Full Sequential Scan.</p>
+                        <pre><code>CREATE INDEX IF NOT EXISTS idx_orders_created_at ON lab_orders(created_at);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, total_amount 
+FROM lab_orders 
+WHERE DATE(created_at) = CURRENT_DATE - INTERVAL '10 days';</code></pre>
+                        <p><strong>Task:</strong> Diagnose why <code>idx_orders_created_at</code> is ignored by <code>DATE(created_at)</code> and rewrite the query so PostgreSQL performs a fast Index Scan without altering the index.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Look at the <code>Filter:</code> line in the Seq Scan output. Applying <code>DATE()</code> to the column transforms every row before comparison, making the predicate non-SARGable.</li>
+                            <li>Rewrite the <code>WHERE</code> clause using <code>&gt;=</code> and <code>&lt;</code> boundaries on the raw <code>created_at</code> column.</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <p><strong>Root Cause:</strong> Wrapping <code>created_at</code> in <code>DATE()</code> blinds the B-Tree because the index stores raw timestamps, not truncated dates.</p>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, total_amount 
+FROM lab_orders 
+WHERE created_at &gt;= (CURRENT_DATE - INTERVAL '10 days')
+  AND created_at &lt;  (CURRENT_DATE - INTERVAL '9 days');</code></pre>
+                        <p><strong>Verdict:</strong> Switches from <code>Seq Scan (13,845 buffers)</code> to <code>Index Scan using idx_orders_created_at (~35 buffers, 0.35ms)</code>.</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 3 -->
+                <div class="question-card-item" data-level="EASY" data-qnum="3">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 3: Tipping Point — When Seq Scan Beats an Index</span>
+                            <span class="badge badge-easy">EASY</span>
+                        </div>
+                        <p>You create an index on <code>order_status</code>. When you query for <code>'PENDING'</code> (1% of rows), PostgreSQL uses the index. When you query for <code>'COMPLETED'</code> (94% of rows), PostgreSQL ignores your index and runs a Sequential Scan!</p>
+                        <pre><code>CREATE INDEX IF NOT EXISTS idx_orders_status ON lab_orders(order_status);
+
+-- Query A (1% of table):
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM lab_orders WHERE order_status = 'PENDING';
+
+-- Query B (94% of table):
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM lab_orders WHERE order_status = 'COMPLETED';</code></pre>
+                        <p><strong>Task:</strong> Run both queries in DBeaver. Then force PostgreSQL to use the index on Query B by running <code>SET enable_seqscan = OFF;</code> in your session and measure why the Index Scan is actually slower for <code>'COMPLETED'</code>!</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Run <code>SET LOCAL enable_seqscan = OFF;</code> before Query B to see what happens when the engine is forced to use an Index Scan for 940,000 rows.</li>
+                            <li>Remember to reset with <code>SET enable_seqscan = ON;</code> afterwards!</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <p><strong>Why Seq Scan Wins for Low Selectivity (greater than 15-20% of table):</strong> Reading 940,000 rows via an Index Scan requires traversing the B-Tree AND jumping across 13,845 heap pages. Sequential Scan reads each 8KB page once in contiguous disk order.</p>
+                        <pre><code>-- When forced with SET enable_seqscan = OFF:
+-- Bitmap Heap Scan / Index Scan takes ~240ms and touches 16,400+ buffers (B-Tree + Heap)
+-- Natural Seq Scan takes ~115ms and touches 13,845 buffers (Heap only)!</code></pre>
+                        <p><strong>Verdict:</strong> Never blindly force indexes on low-selectivity flags; the Cost-Based Optimizer protects you from random I/O amplification.</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 4 -->
+                <div class="question-card-item" data-level="MEDIUM" data-qnum="4">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 4: Engineering a Zero-Heap Index-Only Scan</span>
+                            <span class="badge badge-medium">MEDIUM</span>
+                        </div>
+                        <p>A high-traffic microservice dashboard frequently calculates recent order timestamps and amounts for a given <code>customer_id</code>. Even with <code>idx_orders_customer_id</code>, the database still performs 10-15 random Heap fetches and an explicit Sort per request.</p>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT customer_id, created_at, total_amount
+FROM lab_orders
+WHERE customer_id = 4242
+ORDER BY created_at DESC;</code></pre>
+                        <p><strong>Task:</strong> Design a single Covering Index using the <code>INCLUDE</code> clause so that <code>EXPLAIN (ANALYZE, BUFFERS)</code> reports an <code>Index Only Scan</code> with <code>Heap Fetches: 0</code> and removes the explicit <code>Sort</code> node.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Check what columns are in <code>WHERE</code> (<code>customer_id</code>), <code>ORDER BY</code> (<code>created_at DESC</code>), and <code>SELECT</code> (<code>total_amount</code>).</li>
+                            <li>Put the filter and sort columns in the B-Tree key, and put <code>total_amount</code> in the <code>INCLUDE (...)</code> payload.</li>
+                            <li>Run <code>VACUUM lab_orders;</code> after creating the index so PostgreSQL updates the Visibility Map (<code>Heap Fetches: 0</code>).</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <pre><code>CREATE INDEX idx_orders_cust_created_inc 
+ON lab_orders (customer_id, created_at DESC) 
+INCLUDE (total_amount);
+
+VACUUM ANALYZE lab_orders;</code></pre>
+                        <pre><code>Index Only Scan using idx_orders_cust_created_inc on lab_orders (actual time=0.028..0.031 ms)
+  Index Cond: (customer_id = 4242)
+  Heap Fetches: 0
+  Buffers: shared hit=4</code></pre>
+                        <p><strong>Verdict:</strong> Both the <code>Sort</code> operator and all Heap table reads are eliminated. Only 4 B-Tree pages are touched in RAM.</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 5 -->
+                <div class="question-card-item" data-level="MEDIUM" data-qnum="5">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 5: Partial Indexing the 1% Active Worker Queue</span>
+                            <span class="badge badge-medium">MEDIUM</span>
+                        </div>
+                        <p>Your outbox/order processor polls every second for the oldest 50 <code>'PENDING'</code> orders. A standard composite index on <code>(order_status, created_at)</code> consumes 30MB of RAM because it indexes 990,000 non-pending rows.</p>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, customer_id, total_amount
+FROM lab_orders
+WHERE order_status = 'PENDING'
+ORDER BY created_at ASC
+LIMIT 50;</code></pre>
+                        <p><strong>Task:</strong> Create a tiny Partial Index tailored specifically for <code>'PENDING'</code> orders, verify the index size in KB using <code>pg_size_pretty(pg_relation_size('index_name'))</code>, and confirm sub-millisecond execution.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Since <code>WHERE order_status = 'PENDING'</code> is constant in the partial index predicate, make <code>created_at ASC</code> the index key so the rows are pre-sorted.</li>
+                            <li>Use <code>CREATE INDEX ... ON lab_orders(created_at ASC) WHERE order_status = 'PENDING';</code></li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <pre><code>CREATE INDEX idx_orders_pending_queue 
+ON lab_orders (created_at ASC) 
+WHERE order_status = 'PENDING';
+
+SELECT pg_size_pretty(pg_relation_size('idx_orders_pending_queue'));
+-- Returns ~240 kB (compared to ~30 MB for a full composite index!)</code></pre>
+                        <p><strong>Verdict:</strong> <code>Limit (actual time=0.035..0.082 ms rows=50) -&gt; Index Scan using idx_orders_pending_queue | Buffers: shared hit=53</code>. Zero sort overhead and 99% smaller memory footprint.</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 6 -->
+                <div class="question-card-item" data-level="MEDIUM" data-qnum="6">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 6: Eliminating Disk-Spilling Sorts (external merge)</span>
+                            <span class="badge badge-medium">MEDIUM</span>
+                        </div>
+                        <p>An analytics endpoint sorts all <code>'CANCELLED'</code> orders (50,000 rows) by <code>total_amount DESC</code>. In DBeaver's EXPLAIN plan, you notice: <code>Sort Method: external merge Disk: 4680kB</code>.</p>
+                        <pre><code>SET LOCAL work_mem = '1MB'; -- Simulating constrained per-operation memory
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, customer_id, total_amount
+FROM lab_orders
+WHERE order_status = 'CANCELLED'
+ORDER BY total_amount DESC;</code></pre>
+                        <p><strong>Task:</strong> Observe the <code>temp read/written</code> buffers in EXPLAIN when <code>work_mem</code> is 1MB. Solve this in two ways: (A) Tuning session <code>work_mem</code> for in-memory quicksort, and (B) Eliminating the Sort node altogether with an index.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Look at the <code>Buffers: shared hit=..., temp read=585 written=586</code> line when <code>work_mem = '1MB'</code>.</li>
+                            <li>Test Approach A: <code>SET LOCAL work_mem = '32MB';</code> and watch <code>Sort Method</code> change to <code>quicksort Memory</code>.</li>
+                            <li>Test Approach B: Create a partial index on <code>(total_amount DESC) WHERE order_status = 'CANCELLED'</code>.</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <p><strong>Approach A (Memory Tuning for Ad-hoc Analytics):</strong></p>
+                        <pre><code>SET LOCAL work_mem = '32MB';
+-- Changes Sort Method from "external merge Disk" to "quicksort Memory: 5420kB" (Zero temp disk I/O)</code></pre>
+                        <p><strong>Approach B (Pre-Sorted Index for Frequent Queries):</strong></p>
+                        <pre><code>CREATE INDEX idx_orders_cancelled_amount 
+ON lab_orders (total_amount DESC) 
+WHERE order_status = 'CANCELLED';
+-- Completely removes the Sort operator from the execution plan!</code></pre>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 7 -->
+                <div class="question-card-item" data-level="HARD" data-qnum="7">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 7: Join Strategy Showdown (Hash Join vs. Nested Loop)</span>
+                            <span class="badge badge-hard">HARD</span>
+                        </div>
+                        <p>You are joining <code>lab_customers</code> and <code>lab_orders</code>. Depending on how selective the <code>WHERE</code> filter on <code>lab_customers</code> is, the optimizer radically switches between a <code>Nested Loop</code> and a <code>Hash Join</code>.</p>
+                        <pre><code>-- Query 1: Highly selective (Single Customer)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT c.email, o.order_code, o.total_amount
+FROM lab_customers c
+JOIN lab_orders o ON c.customer_id = o.customer_id
+WHERE c.customer_id = 500;
+
+-- Query 2: Broad Regional Aggregation (25,000 Customers in APAC)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT c.region, COUNT(*), SUM(o.total_amount)
+FROM lab_customers c
+JOIN lab_orders o ON c.customer_id = o.customer_id
+WHERE c.region = 'APAC'
+GROUP BY c.region;</code></pre>
+                        <p><strong>Task:</strong> Ensure <code>idx_orders_customer_id</code> exists. Run both queries, compare the Join algorithms chosen by PostgreSQL, and inspect the <code>Hash</code> node's <code>Buckets</code> and <code>Batches</code> in Query 2.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>In Query 1, outer rows = 1. A <code>Nested Loop</code> performs 1 PK lookup on customers + 1 B-Tree index scan on orders (~10 rows).</li>
+                            <li>In Query 2, outer rows = 25,000. Doing 25,000 separate B-Tree traversals into <code>lab_orders</code> would be slow, so PostgreSQL builds an in-memory Hash Table of the 25,000 APAC customers and streams <code>lab_orders</code> once!</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <ul>
+                            <li><strong>Query 1 Plan:</strong> <code>Nested Loop (actual time=0.05ms | Buffers: shared hit=18)</code>. Ideal when the driving outer table returns very few rows (less than 500) and the inner table is indexed on the join key.</li>
+                            <li><strong>Query 2 Plan:</strong> <code>Finalize Aggregate -&gt; Gather -&gt; Partial Aggregate -&gt; Parallel Hash Join</code>. It builds a Hash table of <code>lab_customers</code> (<code>Buckets: 32768 Batches: 1 Memory Usage: 1250kB</code>) and probes it while scanning <code>lab_orders</code> sequentially.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 8 -->
+                <div class="question-card-item" data-level="HARD" data-qnum="8">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 8: Refactoring Correlated Subqueries &amp; Keyset Pagination</span>
+                            <span class="badge badge-hard">HARD</span>
+                        </div>
+                        <p>A legacy reporting query fetches page 5,000 of orders (<code>OFFSET 100000 LIMIT 20</code>) AND executes a correlated subquery in the <code>SELECT</code> list to count how many total orders that customer has placed.</p>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT 
+    o.order_id,
+    o.order_code,
+    (SELECT COUNT(*) FROM lab_orders o2 WHERE o2.customer_id = o.customer_id) AS cust_order_count
+FROM lab_orders o
+ORDER BY o.order_id ASC
+LIMIT 20 OFFSET 100000;</code></pre>
+                        <p><strong>Task:</strong> Weigh the cost of the <code>OFFSET 100000</code> scan. Refactor the pagination to Keyset/Seek pagination (<code>WHERE o.order_id &gt; 100000</code>) and observe the dramatic drop in execution time and buffers.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Notice how in the original query, PostgreSQL must scan 100,020 rows along <code>lab_orders_pkey</code> before emitting the 20 target rows.</li>
+                            <li>Replace <code>OFFSET 100000</code> with a cursor condition <code>WHERE o.order_id &gt; 100000</code>.</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <pre><code>EXPLAIN (ANALYZE, BUFFERS)
+SELECT 
+    o.order_id,
+    o.order_code,
+    (SELECT COUNT(*) FROM lab_orders o2 WHERE o2.customer_id = o.customer_id) AS cust_order_count
+FROM lab_orders o
+WHERE o.order_id &gt; 100000
+ORDER BY o.order_id ASC
+LIMIT 20;</code></pre>
+                        <p><strong>Verdict:</strong> Drops from scanning 100,020 index tuples (~35ms, 450+ buffers) down to jumping directly to <code>order_id = 100001</code> via the Primary Key B-Tree (<code>0.22ms</code>, ~65 buffers including the 20 fast SubPlan index-only counts).</p>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE 9 -->
+                <div class="question-card-item" data-level="HARD" data-qnum="9">
+                    <div class="question-box">
+                        <div class="question-header">
+                            <span class="question-title">Challenge 9: JSONB GIN Indexing (@&gt;) vs. -&gt;&gt; Text Extraction</span>
+                            <span class="badge badge-hard">HARD</span>
+                        </div>
+                        <p>Your microservices store semi-structured channel and priority attributes inside the <code>metadata</code> JSONB column. Developers write queries using <code>-&gt;&gt;</code> text extraction, causing 1,000,000-row Sequential Scans.</p>
+                        <pre><code>-- Developer's slow query:
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, total_amount 
+FROM lab_orders 
+WHERE metadata-&gt;&gt;'channel' = 'MOBILE' 
+  AND (metadata-&gt;&gt;'priority')::INT = 4;</code></pre>
+                        <p><strong>Task:</strong> Create a Generalized Inverted Index (<code>GIN</code>) using <code>jsonb_path_ops</code> on <code>metadata</code> and rewrite the <code>WHERE</code> clause to use the JSONB containment operator (<code>@&gt;</code>) so PostgreSQL executes a fast Bitmap Index Scan.</p>
+                    </div>
+                    <div class="reveal-controls">
+                        <button type="button" class="btn btn-reveal-hint">💡 Reveal DBeaver Guidance &amp; What to Look For</button>
+                        <button type="button" class="btn btn-primary btn-reveal-sol">✅ Reveal Answer, Optimized SQL &amp; EXPLAIN Verdict</button>
+                    </div>
+                    <div class="reveal-box hint-box">
+                        <h4>🔍 Lab Guidance &amp; DBeaver Steps</h4>
+                        <ul>
+                            <li>Standard B-Tree indexes don't automatically index every key inside a JSONB document.</li>
+                            <li>Create a GIN index: <code>CREATE INDEX idx_orders_meta_gin ON lab_orders USING GIN (metadata jsonb_path_ops);</code></li>
+                            <li>Rewrite the filter using containment: <code>WHERE metadata @&gt; '{"channel": "MOBILE", "priority": 4}'::jsonb</code>.</li>
+                        </ul>
+                    </div>
+                    <div class="reveal-box solution-box">
+                        <h4>🏆 Architectural Solution &amp; Before/After Metrics</h4>
+                        <pre><code>CREATE INDEX idx_orders_meta_gin 
+ON lab_orders USING GIN (metadata jsonb_path_ops);
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT order_id, total_amount 
+FROM lab_orders 
+WHERE metadata @&gt; '{"channel": "MOBILE", "priority": 4}'::jsonb;</code></pre>
+                        <p><strong>Verdict:</strong> Switches from a parallel <code>Seq Scan</code> parsing JSON on 1M rows (~160ms) to a <code>Bitmap Index Scan on idx_orders_meta_gin</code> (~8ms).</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="arena-footer-nav">
+                <button type="button" class="btn" id="btn-prev-q">⬅ Previous Challenge</button>
+                <div class="dot-indicators" id="arena-dots"></div>
+                <button type="button" class="btn btn-primary" id="btn-next-q">Next Challenge ➡</button>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Curated by <strong>Soham Sengupta</strong> | Independent Engineering Practitioner &amp; Educator</p>
+    <p style="margin-top: 0.25rem; font-size: 0.8rem;">Stack-Neutral Foundation-First Architecture Series • Built for DBeaver, PostgreSQL &amp; MySQL Performance Labs</p>
+</footer>
+
+<script>
+(function () {
+    // 1. Speech Helper
+    var isSpeaking = false;
+    function stopSpeech() {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+        isSpeaking = false;
+        var btn = document.getElementById('btn-speech');
+        if (btn) {
+            btn.innerHTML = '🔊 Read Aloud';
+            btn.classList.remove('active');
+        }
+    }
+
+    // 2. Primary Tab Navigation
+    var tabButtons = document.querySelectorAll('.tab-btn');
+    var tabPanels = document.querySelectorAll('.tab-panel');
+    tabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            stopSpeech();
+            var targetId = btn.getAttribute('data-tab-target');
+            tabButtons.forEach(function (b) { b.classList.remove('active'); });
+            tabPanels.forEach(function (p) { p.classList.remove('active'); });
+            btn.classList.add('active');
+            var panel = document.getElementById(targetId);
+            if (panel) panel.classList.add('active');
+        });
+    });
+
+    // 3. Sub-Menu Navigation inside Tabs
+    var subButtons = document.querySelectorAll('.sub-nav-btn');
+    subButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            stopSpeech();
+            var targetId = btn.getAttribute('data-sub-target');
+            var parentTab = btn.closest('.tab-panel');
+            if (!parentTab) return;
+            parentTab.querySelectorAll('.sub-nav-btn').forEach(function (b) { b.classList.remove('active'); });
+            parentTab.querySelectorAll('.sub-panel').forEach(function (p) { p.classList.remove('active'); });
+            btn.classList.add('active');
+            var subPanel = document.getElementById(targetId);
+            if (subPanel) subPanel.classList.add('active');
+        });
+    });
+
+    // 4. Header Controls (Theme, Font Size, Speech, Print, Fullscreen)
+    var themeButtons = document.querySelectorAll('[data-theme-target]');
+    themeButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var theme = btn.getAttribute('data-theme-target');
+            document.documentElement.setAttribute('data-theme', theme);
+            themeButtons.forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+        });
+    });
+
+    var currentFontSize = 16;
+    document.getElementById('btn-font-dec').addEventListener('click', function () {
+        currentFontSize = Math.max(12, currentFontSize - 1);
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+    });
+    document.getElementById('btn-font-inc').addEventListener('click', function () {
+        currentFontSize = Math.min(22, currentFontSize + 1);
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+    });
+
+    document.getElementById('btn-print').addEventListener('click', function () {
+        window.print();
+    });
+
+    document.getElementById('btn-fullscreen').addEventListener('click', function () {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(function () {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    document.getElementById('btn-speech').addEventListener('click', function () {
+        if (!('speechSynthesis' in window)) {
+            alert('Web Speech API is not supported in this browser.');
+            return;
+        }
+        if (isSpeaking) {
+            stopSpeech();
+        } else {
+            var activeTab = document.querySelector('.tab-panel.active');
+            var activeSub = activeTab ? activeTab.querySelector('.sub-panel.active, .question-card-item.active') : null;
+            var text = activeSub ? activeSub.innerText : (activeTab ? activeTab.innerText : document.body.innerText);
+            var utterance = new SpeechSynthesisUtterance(text);
+            utterance.onend = function () { stopSpeech(); };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+            isSpeaking = true;
+            var btn = document.getElementById('btn-speech');
+            btn.innerHTML = '⏹️ Stop Reading';
+            btn.classList.add('active');
+        }
+    });
+
+    // 5. Single-Screen Assignments Arena Logic
+    var allCards = Array.prototype.slice.call(document.querySelectorAll('.question-card-item'));
+    var activeCards = allCards.slice();
+    var currentIndex = 0;
+
+    function resetCardReveals(card) {
+        var hintBox = card.querySelector('.hint-box');
+        var solBox = card.querySelector('.solution-box');
+        var hintBtn = card.querySelector('.btn-reveal-hint');
+        var solBtn = card.querySelector('.btn-reveal-sol');
+        if (hintBox) hintBox.classList.remove('visible');
+        if (solBox) solBox.classList.remove('visible');
+        if (hintBtn) hintBtn.textContent = '💡 Reveal DBeaver Guidance & What to Look For';
+        if (solBtn) solBtn.textContent = '✅ Reveal Answer, Optimized SQL & EXPLAIN Verdict';
+    }
+
+    function updateArenaView() {
+        stopSpeech();
+        allCards.forEach(function (c) {
+            c.classList.remove('active');
+            resetCardReveals(c);
+        });
+
+        var currentCard = activeCards[currentIndex];
+        if (currentCard) {
+            currentCard.classList.add('active');
+        }
+
+        document.getElementById('arena-counter').textContent =
+            'Challenge ' + (currentIndex + 1) + ' of ' + activeCards.length;
+
+        document.getElementById('btn-prev-q').disabled = (currentIndex === 0);
+        document.getElementById('btn-next-q').disabled = (currentIndex === activeCards.length - 1);
+
+        var dotsContainer = document.getElementById('arena-dots');
+        dotsContainer.innerHTML = '';
+        activeCards.forEach(function (card, idx) {
+            var dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'q-dot' + (idx === currentIndex ? ' active' : '');
+            dot.textContent = card.getAttribute('data-qnum');
+            dot.addEventListener('click', function () {
+                currentIndex = idx;
+                updateArenaView();
+            });
+            dotsContainer.appendChild(dot);
+        });
+    }
+
+    // Bind Reveal Buttons inside each card
+    allCards.forEach(function (card) {
+        var hintBtn = card.querySelector('.btn-reveal-hint');
+        var solBtn = card.querySelector('.btn-reveal-sol');
+        var hintBox = card.querySelector('.hint-box');
+        var solBox = card.querySelector('.solution-box');
+
+        if (hintBtn && hintBox) {
+            hintBtn.addEventListener('click', function () {
+                var shown = hintBox.classList.toggle('visible');
+                hintBtn.textContent = shown
+                    ? '🙈 Hide Guidance'
+                    : '💡 Reveal DBeaver Guidance & What to Look For';
+            });
+        }
+        if (solBtn && solBox) {
+            solBtn.addEventListener('click', function () {
+                var shown = solBox.classList.toggle('visible');
+                solBtn.textContent = shown
+                    ? '🙈 Hide Answer & Verdict'
+                    : '✅ Reveal Answer, Optimized SQL & EXPLAIN Verdict';
+            });
+        }
+    });
+
+    // Bind Filter Buttons
+    var filterButtons = document.querySelectorAll('[data-filter]');
+    filterButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var level = btn.getAttribute('data-filter');
+            filterButtons.forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+
+            if (level === 'ALL') {
+                activeCards = allCards.slice();
+            } else {
+                activeCards = allCards.filter(function (c) {
+                    return c.getAttribute('data-level') === level;
+                });
+            }
+            currentIndex = 0;
+            updateArenaView();
+        });
+    });
+
+    // Bind Prev / Next Buttons
+    document.getElementById('btn-prev-q').addEventListener('click', function () {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateArenaView();
+        }
+    });
+    document.getElementById('btn-next-q').addEventListener('click', function () {
+        if (currentIndex < activeCards.length - 1) {
+            currentIndex++;
+            updateArenaView();
+        }
+    });
+
+    updateArenaView();
+})();
+</script>
+
+</body>
+</html>
