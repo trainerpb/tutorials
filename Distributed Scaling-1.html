@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Architecture Deep Dive: Transactions, Locks & Consistency</title>
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #2563eb;
+            --accent-secondary: #1d4ed8;
+            --accent-soft: #dbeafe;
+            --border-color: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --base-font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-soft: rgba(59, 130, 246, 0.15);
+            --border-color: #374151;
+            --code-bg: #030712;
+            --code-text: #e5e7eb;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="sepia"] {
+            --bg-primary: #f4ecd8;
+            --bg-secondary: #fdf6e3;
+            --bg-tertiary: #eee8d5;
+            --text-primary: #433422;
+            --text-secondary: #65533c;
+            --accent-primary: #b58900;
+            --accent-secondary: #cb4b16;
+            --accent-soft: #e8dfca;
+            --border-color: #d3cbb7;
+            --code-bg: #002b36;
+            --code-text: #839496;
+            --success: #859900;
+            --warning: #b58900;
+            --danger: #dc322f;
+            --shadow: 0 4px 6px -1px rgba(67, 52, 34, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--base-font-size);
+            line-height: 1.6;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        /* Sticky Header & Controls */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 0.75rem 1.5rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .brand span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn.active {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            border-color: var(--accent-primary);
+        }
+
+        /* Navigation Tabs */
+        nav.tabs-nav {
+            max-width: 1400px;
+            margin: 0.75rem auto 0;
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.75rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-soft);
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            min-height: calc(100vh - 220px);
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Typography & Cards */
+        .section-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .section-header h2 {
+            font-size: 1.75rem;
+            color: var(--text-primary);
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card h4 {
+            font-size: 1.05rem;
+            margin: 1rem 0 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .badge-warning { background: rgba(234, 179, 8, 0.15); color: var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .badge-info { background: var(--accent-soft); color: var(--accent-primary); }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.875em;
+            line-height: 1.5;
+            margin: 0.75rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            background-color: var(--bg-tertiary);
+            padding: 0.15rem 0.35rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        /* ASCII / Architecture Diagrams */
+        .diagram-box {
+            background-color: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1rem;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-size: 0.85em;
+            color: var(--text-primary);
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-secondary);
+            text-align: left;
+        }
+
+        th, td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-tertiary);
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: var(--bg-tertiary);
+        }
+
+        ul, ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        li {
+            margin-bottom: 0.4rem;
+        }
+
+        .callout {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--accent-primary);
+            background-color: var(--bg-tertiary);
+        }
+
+        .callout.warn {
+            border-left-color: var(--warning);
+        }
+
+        .callout.danger {
+            border-left-color: var(--danger);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 3rem;
+        }
+
+        footer strong {
+            color: var(--text-primary);
+        }
+
+        /* Print Media */
+        @media print {
+            header, .controls, nav.tabs-nav {
+                display: none !important;
+            }
+            .tab-panel {
+                display: block !important;
+                page-break-after: always;
+            }
+            body {
+                background: #fff;
+                color: #000;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                break-inside: avoid;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <div class="brand">
+            <h1>Enterprise System Design &amp; Spring Architecture</h1>
+            <span>Foundation-First Blueprint: Probabilistic Filters, ACID Transactions, Locking &amp; Consistency</span>
+        </div>
+        <div class="controls">
+            <button class="btn" onclick="setTheme('light')" id="theme-light" title="Light Mode">☀️ Light</button>
+            <button class="btn active" onclick="setTheme('dark')" id="theme-dark" title="Dark Mode">🌙 Dark</button>
+            <button class="btn" onclick="setTheme('sepia')" id="theme-sepia" title="Sepia Mode">📜 Sepia</button>
+            <button class="btn" onclick="changeFontSize(-1)" title="Decrease Font">A-</button>
+            <button class="btn" onclick="changeFontSize(1)" title="Increase Font">A+</button>
+            <button class="btn" onclick="toggleSpeech()" id="btn-speech" title="Read Active Tab Aloud">🔊 Read Aloud</button>
+            <button class="btn" onclick="window.print()" title="Print Study Guide">🖨️ Print</button>
+            <button class="btn" onclick="toggleFullScreen()" title="Full Screen">⛶ Fullscreen</button>
+        </div>
+    </div>
+    <nav class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('tab-bloom', this)">1. Probabilistic Edge &amp; Outbox</button>
+        <button class="tab-btn" onclick="switchTab('tab-tx', this)">2. Spring @Transactional Mechanics</button>
+        <button class="tab-btn" onclick="switchTab('tab-locks', this)">3. Database Locks Deep Dive</button>
+        <button class="tab-btn" onclick="switchTab('tab-consistency', this)">4. Distributed Consistency Models</button>
+    </nav>
+</header>
+
+<main id="main-content">
+
+    <!-- ==================== TAB 1: BLOOM FILTERS & OUTBOX ==================== -->
+    <section id="tab-bloom" class="tab-panel active">
+        <div class="section-header">
+            <h2>1. High-Scale Signup Architecture: Bloom Filters &amp; Transactional Outbox</h2>
+            <p>Shielding the primary relational database from read storms while guaranteeing zero-downtime capacity migrations and atomic state propagation.</p>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <h3>The Probabilistic Guardrail <span class="badge badge-info">Fast Path</span></h3>
+                <p>A Bloom filter does <strong>not</strong> solve race conditions directly; rather, it acts as a shock absorber in front of PostgreSQL. By hashing a candidate username through <em>k</em> functions (simulated via MurmurHash3 128-bit splitting: <code>h_i = h_1 + i * h_2 (mod m)</code>), it answers membership queries in <code>O(k)</code> memory time.</p>
+                <ul>
+                    <li><strong>Definitely Does Not Exist (Bit = 0):</strong> If <em>even a single</em> hashed bit index is <code>0</code>, the username has never been claimed. Approve immediately with <strong>zero database hits</strong>.</li>
+                    <li><strong>May Exist / False Positive (All Bits = 1):</strong> Either the username is taken, or overlapping hashes from other users flipped those bits. Fall back to a primary database query to verify.</li>
+                    <li><strong>The Final Race Arbiter:</strong> The PostgreSQL <code>UNIQUE</code> constraint handles concurrent millisecond collisions via ACID serialization.</li>
+                </ul>
+                <div class="diagram-box">[User Request: "soham"] 
+       │
+       ▼
+[Murmur3_128 Hash] ──► Indices [2, 7, 11]
+       │
+       ├─► Any bit == 0? ──► [100% Available! Skip DB]
+       │
+       └─► All bits == 1? ─► [Collision / Taken] ──► Query PostgreSQL</div>
+            </div>
+
+            <div class="card">
+                <h3>Solving Dual-Write via Transactional Outbox <span class="badge badge-success">Eventual Sync</span></h3>
+                <p>Updating the Bloom filter <em>before</em> the DB commit risks "poisoning" the bit array if the DB transaction rolls back. Updating it directly <em>after</em> the DB commit risks losing the update if the JVM crashes between the PostgreSQL commit and the Redis network call.</p>
+                <pre><code>@Service
+public class UserRegistrationService {
+    @Transactional
+    public void registerUser(String username) {
+        // 1. Primary table insert (Enforces UNIQUE constraint)
+        userRepository.save(new AppUser(username));
+
+        // 2. Outbox insert in the SAME physical ACID transaction
+        outboxRepository.save(new OutboxEvent("USER_CREATED", username));
+    }
+}</code></pre>
+                <div class="callout">
+                    <strong>Capacity Sizing (<code>tryInit(10_000_000, 0.01)</code>):</strong> You tell Redisson the expected total insertions (<em>n</em>) and acceptable false-positive probability (<em>p = 1%</em>) so it calculates the fixed bit array length (<em>m</em>) and hash count (<em>k</em>).
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Zero-Downtime Bloom Filter Scaling (V1 to V2 Migration) <span class="badge badge-warning">Blue-Green Hydration</span></h3>
+            <p>Because modulo arithmetic depends on a fixed array size <em>m</em>, a Bloom filter cannot be dynamically resized. When capacity approaches limits, execute a 4-phase live migration using <strong>Spring Batch Chunking</strong> and a <strong>Dual-Write / Short-Circuit Abstraction</strong>.</p>
+            <div class="grid-2">
+                <div>
+                    <h4>1. Memory-Safe Hydration (Spring Batch)</h4>
+                    <pre><code>@Bean
+public ItemReader&lt;String&gt; usernameReader(DataSource ds) {
+    return new JdbcPagingItemReaderBuilder&lt;String&gt;()
+        .name("usernameReader").dataSource(ds)
+        .selectClause("SELECT username").fromClause("FROM users")
+        .sortKeys(Map.of("id", Order.ASCENDING))
+        .rowMapper((rs, rowNum) -&gt; rs.getString("username"))
+        .pageSize(10_000) // Stream 10k rows at a time; prevents OOM
+        .build();
+}</code></pre>
+                </div>
+                <div>
+                    <h4>2. Short-Circuit Migration Proxy</h4>
+                    <pre><code>@Override
+public boolean mightContain(String username) {
+    if (cutoverComplete) return v2.mightContain(username);
+    if (!v2HydrationComplete) return v1.mightContain(username);
+
+    // Hydration done: Use larger V2 to short-circuit V1 false positives!
+    if (!v2.mightContain(username)) return false;
+    return v1.mightContain(username);
+}
+
+@Override
+public void add(String username) {
+    if (!cutoverComplete) v1.add(username);
+    v2.add(username); // Idempotent dual-write during migration
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 2: SPRING @TRANSACTIONAL ==================== -->
+    <section id="tab-tx" class="tab-panel">
+        <div class="section-header">
+            <h2>2. Demystifying Spring / Jakarta <code>@Transactional</code> Mechanics</h2>
+            <p>Understanding AOP proxy boundaries, EJB philosophical roots, autonomous propagation, state versioning, and self-healing retry loops.</p>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <h3>Lab 1 &amp; 2: The EJB Legacy &amp; Exception Philosophy <span class="badge badge-danger">The Default Trap</span></h3>
+                <p>Spring inherited its rollback rules from EJB: <strong>Unchecked exceptions (<code>RuntimeException</code>, <code>Error</code>)</strong> signal fatal infrastructure or programming defects, triggering an automatic rollback. <strong>Checked exceptions (<code>Exception</code>)</strong> were historically viewed as recoverable "alternative return values," causing the proxy to <strong>commit</strong> partial work by default.</p>
+                <div class="callout warn">
+                    <strong>Modern Domain Standard:</strong> All domain exceptions (e.g., <code>InsufficientFundsException</code>) MUST extend <code>RuntimeException</code>. This guarantees fail-safe automatic rollbacks, keeps method signatures clean, and works seamlessly with Java Streams/Lambdas.
+                </div>
+                <pre><code>// Explicitly overriding proxy rules for legacy SDKs &amp; side-effects
+@Transactional(
+    rollbackFor = LegacyPaymentCheckedException.class,
+    noRollbackFor = NotificationDeliveryRuntimeException.class
+)
+public void processOrder(Order order) throws LegacyPaymentCheckedException {
+    orderRepository.save(order);
+    legacyGateway.charge(); // Throws checked -&gt; Rolls back!
+    notificationClient.sendSms(); // Throws runtime -&gt; Commits anyway!
+}</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Lab 3: Autonomous Auditing vs. State Time-Travel <span class="badge badge-info">Audit Architecture</span></h3>
+                <p>A rollback shreds everything inside its physical transaction boundary. To audit failed attempts versus successful state transitions, combine two complementary tools:</p>
+                <ul>
+                    <li><strong>Business Intent / Failure Logging (<code>Propagation.REQUIRES_NEW</code>):</strong> Suspends the outer transaction, borrows a <strong>second physical connection</strong> from HikariCP, commits the audit log independently, and resumes the outer transaction.</li>
+                    <li><strong>Temporal State Versioning (Hibernate Envers <code>@Audited</code>):</strong> Piggybacks on the <em>same</em> transaction to record snapshots in <code>orders_aud</code> and <code>revinfo</code> (<code>REVTYPE</code>: 0=ADD, 1=MOD, 2=DEL). Blind to rollbacks, but effortless for compliance history.</li>
+                </ul>
+                <pre><code>@Service
+public class AuditLogService {
+    // Must reside in a separate Spring Bean to avoid self-invocation bypass!
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logAttempt(String action, String detail) {
+        auditRepo.save(new AuditLog(action, detail));
+    }
+}</code></pre>
+                <div class="callout danger">
+                    <strong>The HikariCP Exhaustion Trap:</strong> Every nested <code>REQUIRES_NEW</code> call holds 2 simultaneous DB connections per thread. Under high concurrency, this can deadlock your connection pool if overused.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Lab 4: Transient Resilience with <code>@Retryable</code> <span class="badge badge-success">Self-Healing</span></h3>
+            <p>When wrapping <code>@Transactional</code> with <code>@Retryable</code>, the Retry AOP interceptor sits <strong>outside</strong> the Transaction interceptor. If a transient lock exception occurs, the inner transaction rolls back cleanly, waits for the backoff period, and initiates a brand-new database transaction on the next attempt.</p>
+            <pre><code>@Retryable(
+    retryFor = { CannotAcquireLockException.class, OptimisticLockingFailureException.class },
+    maxAttempts = 3,
+    backoff = @Backoff(delay = 1000, multiplier = 2.0)
+)
+@Transactional
+public void processContendedOrder(String product) {
+    // Executed in a fresh transaction on each retry attempt
+    orderRepository.save(new AppOrder(product, "CONFIRMED"));
+}
+
+@Recover
+public void recoverOrder(Exception e, String product) {
+    // Triggered after all 3 attempts fail. Route to Dead Letter Queue (DLQ).
+    dlqPublisher.publishFailedOrder(product, e.getMessage());
+}</code></pre>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 3: DATABASE LOCKS DEEP DIVE ==================== -->
+    <section id="tab-locks" class="tab-panel">
+        <div class="section-header">
+            <h2>3. Database Locking Architecture &amp; Concurrency Control</h2>
+            <p>Bridging JPA annotations to physical PostgreSQL row locks, wait policies, and lock-free multi-JVM optimistic concurrency.</p>
+        </div>
+
+        <div class="card">
+            <h3>JPA Locking Annotations &amp; Hint Directives Reference</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Annotation / Hint</th>
+                            <th>Attribute / Value</th>
+                            <th>Generated SQL Equivalent</th>
+                            <th>Engine Behavior &amp; Architectural Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>@Lock</code></td>
+                            <td><code>LockModeType.PESSIMISTIC_WRITE</code></td>
+                            <td><code>SELECT ... FOR UPDATE</code></td>
+                            <td>Acquires an exclusive row lock. Blocks all other concurrent writers and locking readers until transaction commits/rolls back.</td>
+                        </tr>
+                        <tr>
+                            <td><code>@Lock</code></td>
+                            <td><code>LockModeType.PESSIMISTIC_READ</code></td>
+                            <td><code>SELECT ... FOR SHARE</code></td>
+                            <td>Acquires a shared lock. Other transactions can read the row, but no transaction can modify or exclusively lock it.</td>
+                        </tr>
+                        <tr>
+                            <td><code>@Lock</code> / <code>@Version</code></td>
+                            <td><code>LockModeType.OPTIMISTIC</code></td>
+                            <td><code>UPDATE ... WHERE id=? AND version=?</code></td>
+                            <td>No database lock held during read. Detects concurrent modifications atomically at flush time via row update counts.</td>
+                        </tr>
+                        <tr>
+                            <td><code>@QueryHint</code></td>
+                            <td><code>lock.timeout = "0"</code></td>
+                            <td><code>SELECT ... FOR UPDATE NOWAIT</code></td>
+                            <td><strong>Fail-Fast:</strong> Prevents thread pool blocking. Throws <code>PessimisticLockingFailureException</code> immediately if row is locked.</td>
+                        </tr>
+                        <tr>
+                            <td><code>@QueryHint</code></td>
+                            <td><code>lock.timeout = "-2"</code></td>
+                            <td><code>SELECT ... FOR UPDATE SKIP LOCKED</code></td>
+                            <td><strong>Worker Queue:</strong> Silently ignores locked rows during index scan and locks the next available unlocked row.</td>
+                        </tr>
+                        <tr>
+                            <td><code>@QueryHint</code></td>
+                            <td><code>lock.timeout = "3000"</code></td>
+                            <td><code>SET LOCAL lock_timeout = 3000</code></td>
+                            <td><strong>Bounded Wait:</strong> Blocks the thread up to 3,000ms waiting for the lock before aborting with an exception.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <h3>1. Pessimistic Write + NOWAIT <span class="badge badge-danger">High Contention</span></h3>
+                <p>Ideal for financial ledger transfers or inventory deduction where collisions are frequent and data integrity is paramount. Using <code>timeout = "0"</code> protects HikariCP threads from hanging indefinitely.</p>
+                <pre><code>public interface AccountRepo extends JpaRepository&lt;Account, Long&gt; {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({
+        @QueryHint(
+            name = "jakarta.persistence.lock.timeout", 
+            value = "0" // NOWAIT
+        )
+    })
+    Optional&lt;Account&gt; findByIdForUpdate(Long id);
+}</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>2. Pessimistic SKIP LOCKED <span class="badge badge-success">Distributed Queue</span></h3>
+                <p>Turns PostgreSQL into a high-speed concurrent job broker. When 50 Spring Boot pods poll the outbox table simultaneously, PostgreSQL skips locked rows in the index scan and hands each pod a distinct batch.</p>
+                <pre><code>public interface OutboxRepo extends JpaRepository&lt;OutboxEvent, Long&gt; {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({
+        @QueryHint(
+            name = "jakarta.persistence.lock.timeout", 
+            value = "-2" // SKIP LOCKED
+        )
+    })
+    @Query("SELECT e FROM OutboxEvent e WHERE e.processed = false")
+    List&lt;OutboxEvent&gt; pollBatch(Pageable pageable);
+}</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>3. Multi-JVM Optimistic Lock <span class="badge badge-info">High Read / Low Collision</span></h3>
+                <p>Works across independent JVMs and Kubernetes pods without Redis locks because the arbitration happens atomically inside the database's SQL execution engine.</p>
+                <pre><code>@Entity
+public class Wallet {
+    @Id private Long id;
+    private BigDecimal balance;
+    
+    @Version // Managed by Hibernate
+    private Long version;
+}</code></pre>
+                <div class="diagram-box">Pod A &amp; Pod B read ID=1 (version=1)
+Pod A executes: UPDATE ... SET version=2 WHERE id=1 AND version=1
+  └─► Rows Affected: 1 (Commit Success!)
+Pod B executes: UPDATE ... SET version=2 WHERE id=1 AND version=1
+  └─► Rows Affected: 0 (Throws OptimisticLockingFailureException!)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 4: CONSISTENCY MODELS ==================== -->
+    <section id="tab-consistency" class="tab-panel">
+        <div class="section-header">
+            <h2>4. Distributed Consistency Spectrum &amp; Spring Boot Implementations</h2>
+            <p>Architecting how Strong, Eventual, Causal, and Session consistency models cooperate across microservices.</p>
+        </div>
+
+        <div class="card">
+            <h3>Architectural Cooperation Matrix: How Consistency Models Work Together</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Consistency Model</th>
+                            <th>Role in the System Architecture</th>
+                            <th>Primary Pros</th>
+                            <th>Primary Cons</th>
+                            <th>Real-World Use Cases</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Strong (ACID / Linearizable)</strong></td>
+                            <td><strong>The Command Core:</strong> Acts as the single source of truth for state mutations, then emits events downstream.</td>
+                            <td>Zero dirty/stale reads; strict mathematical correctness; simple mental model.</td>
+                            <td>High latency due to lock serialization; reduced availability under partitions (CAP).</td>
+                            <td>Core banking ledgers, billing, inventory allocation, seat booking.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Eventual (BASE / Async)</strong></td>
+                            <td><strong>The Query Scale Layer:</strong> Consumes events from the Strong core via Kafka/Outbox to hydrate read replicas.</td>
+                            <td>Massive horizontal read throughput; zero read locking; survives primary DB outages.</td>
+                            <td>Replication lag causes temporary stale reads; requires idempotent consumers.</td>
+                            <td>YouTube view counters, product catalogs, analytics dashboards, search indexes.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Causal (Dependency-Ordered)</strong></td>
+                            <td><strong>The Logical Sequencer:</strong> Sits on edge consumers; enforces cause-and-effect ordering before exposing Eventual data.</td>
+                            <td>Prevents nonsensical out-of-order UI states without paying the cost of global locking.</td>
+                            <td>Requires vector clocks or parent-ID dependency checks in message consumers.</td>
+                            <td>Comment threads, WhatsApp/Slack replies, collaborative document editing.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Session (Read-Your-Writes)</strong></td>
+                            <td><strong>The UX Router:</strong> Pins the mutating user to the Strong primary node briefly while everyone else reads Eventual replicas.</td>
+                            <td>Gives the active user instant feedback while preserving 99% replica offloading.</td>
+                            <td>Requires sticky tokens/headers and custom <code>AbstractRoutingDataSource</code> logic.</td>
+                            <td>Updating user profile bio/avatar, e-commerce order confirmation screens.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <h3>1. Eventual Consistency (CQRS Command/Query Split)</h3>
+                <p>Decouples high-velocity writes from read projections using an append-only log and asynchronous Kafka consumers.</p>
+                <pre><code>// COMMAND SIDE: Fast write + Event emission
+@Transactional
+public void recordVideoView(Long videoId) {
+    viewLogRepo.save(new ViewLog(videoId, Instant.now()));
+    kafkaTemplate.send("video-views", videoId.toString());
+}
+
+// QUERY SIDE: Eventual projection update
+@KafkaListener(topics = "video-views")
+@Transactional
+public void projectViewCount(String videoId) {
+    videoStatsReadRepo.incrementCount(Long.valueOf(videoId));
+}</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>2. Causal Consistency (Parent-Child Guard)</h3>
+                <p>Ensures an effect (Reply B) is never committed to a local read store before its cause (Question A) has arrived over the network.</p>
+                <pre><code>@KafkaListener(topics = "chat-events")
+public void consumeChatMessage(ChatMessage msg) {
+    // Verify causal parent exists in local replica before committing
+    if (msg.getParentId() != null &amp;&amp; !chatRepo.existsById(msg.getParentId())) {
+        // Trigger Kafka retry / backoff until parent message arrives
+        throw new CausalParentMissingException("Awaiting parent: " + msg.getParentId());
+    }
+    chatRepo.save(msg);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>3. Session Consistency (Read-Your-Own-Writes via Spring <code>AbstractRoutingDataSource</code>)</h3>
+            <p>Routes a user's immediate post-mutation GET requests to the Primary PostgreSQL node while offloading standard traffic to Read Replicas.</p>
+            <div class="grid-2">
+                <div>
+                    <h4>Context Holder &amp; Dynamic DataSource Router</h4>
+                    <pre><code>public class DbRouteContext {
+    private static final ThreadLocal&lt;String&gt; ROUTE = new ThreadLocal&lt;&gt;();
+    public static void set(String db) { ROUTE.set(db); }
+    public static String get() { return ROUTE.get(); }
+    public static void clear() { ROUTE.remove(); }
+}
+
+public class PrimaryReplicaRoutingDataSource extends AbstractRoutingDataSource {
+    @Override
+    protected Object determineCurrentLookupKey() {
+        return DbRouteContext.get() != null ? DbRouteContext.get() : "REPLICA";
+    }
+}</code></pre>
+                </div>
+                <div>
+                    <h4>Servlet Filter Inspecting Mutation State</h4>
+                    <pre><code>@Component
+public class SessionConsistencyFilter extends OncePerRequestFilter {
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws ServletException, IOException {
+        try {
+            // Pin to PRIMARY if mutating or carrying a recent-write session token
+            boolean isMutationOrRecent = !req.getMethod().equals("GET") 
+                                         || req.getHeader("X-Recent-Write-Token") != null;
+            DbRouteContext.set(isMutationOrRecent ? "PRIMARY" : "REPLICA");
+            chain.doFilter(req, res);
+        } finally {
+            DbRouteContext.clear(); // Crucial for Virtual/Platform thread reuse
+        }
+    }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Curated by <strong>Soham Sengupta</strong> | Independent Engineering Practitioner &amp; Educator</p>
+    <p style="margin-top: 0.25rem; font-size: 0.8rem;">Stack-Neutral Foundation-First Architecture Series • Built for Localhost Labs &amp; Enterprise Production</p>
+</footer>
+
+<script>
+    // 1. Tab Switching
+    function switchTab(tabId, btnElement) {
+        stopSpeech();
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        btnElement.classList.add('active');
+    }
+
+    // 2. Theme Switching
+    function setTheme(themeName) {
+        document.documentElement.setAttribute('data-theme', themeName);
+        document.querySelectorAll('[id^="theme-"]').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('theme-' + themeName).classList.add('active');
+    }
+
+    // 3. Font Size Adjustment
+    let currentFontSize = 16;
+    function changeFontSize(delta) {
+        currentFontSize = Math.min(22, Math.max(12, currentFontSize + delta));
+        document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
+    }
+
+    // 4. Web Speech API (Read Aloud)
+    let isSpeaking = false;
+    function toggleSpeech() {
+        if (!('speechSynthesis' in window)) {
+            alert('Web Speech API is not supported in this browser.');
+            return;
+        }
+        if (isSpeaking) {
+            stopSpeech();
+        } else {
+            const activePanel = document.querySelector('.tab-panel.active');
+            const textToRead = activePanel ? activePanel.innerText : document.body.innerText;
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.rate = 1.0;
+            utterance.onend = () => {
+                isSpeaking = false;
+                updateSpeechBtn();
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+            isSpeaking = true;
+            updateSpeechBtn();
+        }
+    }
+
+    function stopSpeech() {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+        isSpeaking = false;
+        updateSpeechBtn();
+    }
+
+    function updateSpeechBtn() {
+        const btn = document.getElementById('btn-speech');
+        if (isSpeaking) {
+            btn.innerHTML = '⏹️ Stop Reading';
+            btn.classList.add('active');
+        } else {
+            btn.innerHTML = '🔊 Read Aloud';
+            btn.classList.remove('active');
+        }
+    }
+
+    // 5. Fullscreen Toggle
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    window.addEventListener('beforeunload', stopSpeech);
+</script>
+
+</body>
+</html>
