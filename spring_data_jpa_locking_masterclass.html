@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Data JPA Locking Masterclass: Customer & Refund Use Cases</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       THEME TOKENS & DYNAMIC SCALING
+       ========================================================================== */
+    :root {
+      --base-font-size: 16px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    html {
+      font-size: var(--base-font-size);
+      font-family: var(--font-sans);
+      scroll-behavior: smooth;
+    }
+
+    /* Dark Theme (Default) */
+    html[data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1e293b;
+      --bg-card: #151e32;
+      --bg-code: #0d1322;
+      --bg-code-line-hover: rgba(99, 102, 241, 0.08);
+      --bg-code-line-active: rgba(99, 102, 241, 0.24);
+      --border-active-line: #818cf8;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --border-color: #1e293b;
+      --border-strong: #334155;
+      --accent-primary: #6366f1;
+      --accent-secondary: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --badge-sql-bg: rgba(16, 185, 129, 0.12);
+      --badge-sql-text: #34d399;
+      --badge-warn-bg: rgba(245, 158, 11, 0.14);
+      --badge-warn-text: #fbbf24;
+      --badge-danger-bg: rgba(239, 68, 68, 0.14);
+      --badge-danger-text: #f87171;
+      --syntax-kw: #c084fc;
+      --syntax-ann: #fbbf24;
+      --syntax-type: #38bdf8;
+      --syntax-str: #34d399;
+      --syntax-comment: #64748b;
+      --syntax-num: #fb923c;
+    }
+
+    /* Light Theme */
+    html[data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-code: #f8fafc;
+      --bg-code-line-hover: rgba(79, 70, 229, 0.06);
+      --bg-code-line-active: rgba(79, 70, 229, 0.16);
+      --border-active-line: #4f46e5;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent-primary: #4f46e5;
+      --accent-secondary: #4338ca;
+      --accent-glow: rgba(79, 70, 229, 0.15);
+      --badge-sql-bg: #ecfdf5;
+      --badge-sql-text: #047857;
+      --badge-warn-bg: #fffbeb;
+      --badge-warn-text: #b45309;
+      --badge-danger-bg: #fef2f2;
+      --badge-danger-text: #b91c1c;
+      --syntax-kw: #7c3aed;
+      --syntax-ann: #d97706;
+      --syntax-type: #0284c7;
+      --syntax-str: #059669;
+      --syntax-comment: #64748b;
+      --syntax-num: #ea580c;
+    }
+
+    /* Sepia Theme */
+    html[data-theme="sepia"] {
+      --bg-primary: #f4ecd8;
+      --bg-secondary: #fdf6e3;
+      --bg-tertiary: #eee8d5;
+      --bg-card: #faf2de;
+      --bg-code: #efe7d1;
+      --bg-code-line-hover: rgba(181, 137, 0, 0.1);
+      --bg-code-line-active: rgba(203, 75, 22, 0.2);
+      --border-active-line: #cb4b16;
+      --text-primary: #3b3228;
+      --text-secondary: #584c3e;
+      --text-muted: #857968;
+      --border-color: #e1d7c1;
+      --border-strong: #cfc2a9;
+      --accent-primary: #b58900;
+      --accent-secondary: #cb4b16;
+      --accent-glow: rgba(181, 137, 0, 0.2);
+      --badge-sql-bg: rgba(133, 153, 0, 0.15);
+      --badge-sql-text: #596800;
+      --badge-warn-bg: rgba(181, 137, 0, 0.16);
+      --badge-warn-text: #8c6900;
+      --badge-danger-bg: rgba(220, 50, 47, 0.14);
+      --badge-danger-text: #a81e1b;
+      --syntax-kw: #6c71c4;
+      --syntax-ann: #b58900;
+      --syntax-type: #268bd2;
+      --syntax-str: #2aa198;
+      --syntax-comment: #93a1a1;
+      --syntax-num: #cb4b16;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.2s ease, color 0.2s ease;
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-primary);
+    }
+
+    /* Code Editor Styling */
+    .code-container {
+      font-family: var(--font-mono);
+      background-color: var(--bg-code);
+      border: 1px solid var(--border-strong);
+    }
+
+    .code-line {
+      display: grid;
+      grid-template-columns: 3.25rem 1fr;
+      align-items: baseline;
+      padding: 0.16rem 0.75rem 0.16rem 0;
+      border-left: 4px solid transparent;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      line-height: 1.55;
+      font-size: 0.85rem;
+    }
+
+    .code-line:hover {
+      background-color: var(--bg-code-line-hover);
+    }
+
+    .code-line.active-line {
+      background-color: var(--bg-code-line-active);
+      border-left-color: var(--border-active-line);
+    }
+
+    .code-line.dimmed-line {
+      opacity: 0.52;
+    }
+
+    .line-num {
+      user-select: none;
+      text-align: right;
+      padding-right: 0.85rem;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+    }
+
+    .active-line .line-num {
+      color: var(--accent-secondary);
+      font-weight: 700;
+    }
+
+    .line-content {
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* Syntax Highlight Classes */
+    .tok-kw { color: var(--syntax-kw); font-weight: 600; }
+    .tok-ann { color: var(--syntax-ann); font-weight: 600; }
+    .tok-type { color: var(--syntax-type); }
+    .tok-str { color: var(--syntax-str); }
+    .tok-com { color: var(--syntax-comment); font-style: italic; }
+    .tok-num { color: var(--syntax-num); }
+
+    /* Theme Card & Surface Classes */
+    .surface-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+    }
+    .surface-secondary {
+      background-color: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+    .surface-tertiary {
+      background-color: var(--bg-tertiary);
+      border-color: var(--border-strong);
+    }
+
+    /* Tab Button Active State */
+    .nav-tab-btn {
+      position: relative;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .nav-tab-btn:hover {
+      color: var(--text-primary);
+      background-color: var(--bg-tertiary);
+    }
+    .nav-tab-btn.active {
+      color: var(--accent-secondary);
+      border-bottom-color: var(--accent-primary);
+      background-color: var(--bg-code-line-hover);
+      font-weight: 700;
+    }
+
+    /* Step Pill Active State */
+    .step-pill {
+      border: 1px solid var(--border-strong);
+      background-color: var(--bg-secondary);
+      color: var(--text-secondary);
+      transition: all 0.18s ease;
+    }
+    .step-pill:hover {
+      border-color: var(--accent-secondary);
+      color: var(--text-primary);
+    }
+    .step-pill.active {
+      background-color: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #ffffff;
+      box-shadow: 0 0 14px var(--accent-glow);
+      font-weight: 600;
+    }
+
+    /* Sub-mode selector button */
+    .submode-btn {
+      border: 1px solid var(--border-strong);
+      background-color: var(--bg-secondary);
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+    .submode-btn.active {
+      background-color: var(--accent-primary);
+      color: #ffffff;
+      border-color: var(--accent-primary);
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    /* Print Styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .code-line.dimmed-line {
+        opacity: 1 !important;
+      }
+      .surface-card, .code-container {
+        border: 1px solid #cccccc !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ==========================================================================
+       STICKY HEADER & UTILITIES BAR
+       ========================================================================== -->
+  <header class="sticky top-0 z-50 surface-secondary border-b backdrop-blur-md bg-opacity-95">
+    <div class="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-lg" style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background: var(--badge-sql-bg); color: var(--badge-sql-text);">Spring Data JPA & Hibernate</span>
+            <span class="text-xs hidden sm:inline" style="color: var(--text-muted);">Domain: Customer &amp; Refund</span>
+          </div>
+          <h1 class="text-base sm:text-lg font-extrabold tracking-tight leading-tight">
+            Database Locking Masterclass &amp; Interactive Code Walkthrough
+          </h1>
+        </div>
+      </div>
+
+      <!-- Interactive Utility Toolbar -->
+      <div class="flex flex-wrap items-center gap-2 no-print">
+        <!-- Theme Switcher -->
+        <div class="flex items-center rounded-lg p-1 surface-tertiary border" role="group" aria-label="Theme Switcher">
+          <button onclick="setTheme('light')" id="theme-btn-light" class="px-2.5 py-1 text-xs font-medium rounded-md transition" title="Light Theme">☀️ Light</button>
+          <button onclick="setTheme('dark')" id="theme-btn-dark" class="px-2.5 py-1 text-xs font-medium rounded-md transition" title="Dark Theme">🌙 Dark</button>
+          <button onclick="setTheme('sepia')" id="theme-btn-sepia" class="px-2.5 py-1 text-xs font-medium rounded-md transition" title="Sepia Reading Theme">📜 Sepia</button>
+        </div>
+
+        <!-- Font Scaling Controls -->
+        <div class="flex items-center rounded-lg p-1 surface-tertiary border">
+          <button onclick="adjustFontSize(-1)" class="px-2.5 py-1 text-xs font-bold rounded hover:opacity-80 transition" title="Decrease Font Size">A-</button>
+          <span id="font-size-label" class="px-2 text-xs font-mono" style="color: var(--text-muted);">16px</span>
+          <button onclick="adjustFontSize(1)" class="px-2.5 py-1 text-xs font-bold rounded hover:opacity-80 transition" title="Increase Font Size">A+</button>
+        </div>
+
+        <!-- Read Aloud Button (Web Speech API) -->
+        <button id="btn-tts" onclick="toggleReadAloud()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg surface-tertiary border hover:opacity-90 transition" title="Read Current Explanation Aloud">
+          <span id="tts-icon">🔊</span>
+          <span id="tts-label">Read Aloud</span>
+        </button>
+
+        <!-- Fullscreen Toggle -->
+        <button onclick="toggleFullScreen()" class="px-3 py-1.5 text-xs font-semibold rounded-lg surface-tertiary border hover:opacity-90 transition" title="Toggle Fullscreen">
+          ⛶ Fullscreen
+        </button>
+
+        <!-- Print Button -->
+        <button onclick="window.print()" class="px-3 py-1.5 text-xs font-semibold rounded-lg surface-tertiary border hover:opacity-90 transition" title="Print Study Guide">
+          🖨️ Print
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         TAB NAVIGATION BAR
+         ======================================================================== -->
+    <nav class="max-w-[1600px] mx-auto px-4 flex overflow-x-auto no-print border-t" style="border-color: var(--border-color);" aria-label="Lock Scenarios">
+      <button onclick="switchTab('overview')" id="tab-btn-overview" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>1. Overview &amp; Entities</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono surface-tertiary">Schema</span>
+      </button>
+      <button onclick="switchTab('pessimistic_write')" id="tab-btn-pessimistic_write" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>2. PESSIMISTIC_WRITE</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono" style="background: var(--badge-danger-bg); color: var(--badge-danger-text);">FOR UPDATE</span>
+      </button>
+      <button onclick="switchTab('pessimistic_read')" id="tab-btn-pessimistic_read" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>3. PESSIMISTIC_READ</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono" style="background: var(--badge-warn-bg); color: var(--badge-warn-text);">FOR SHARE</span>
+      </button>
+      <button onclick="switchTab('query_hints')" id="tab-btn-query_hints" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>4. SKIP LOCKED &amp; Timeouts</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono" style="background: var(--badge-sql-bg); color: var(--badge-sql-text);">@QueryHint</span>
+      </button>
+      <button onclick="switchTab('version_lock')" id="tab-btn-version_lock" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>5. @Version Lock</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono surface-tertiary">Optimistic</span>
+      </button>
+      <button onclick="switchTab('optimistic_strict')" id="tab-btn-optimistic_strict" class="nav-tab-btn px-4 py-3 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+        <span>6. LockModeType.OPTIMISTIC</span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded font-mono" style="background: var(--badge-sql-bg); color: var(--badge-sql-text);">Cross-Entity</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ==========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================== -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 py-5 space-y-5">
+
+    <!-- Top Scenario Summary Banner + When to Use / Golden Rules -->
+    <section id="scenario-header-card" class="surface-card rounded-2xl p-5 shadow-md">
+      <!-- Dynamically populated by JS -->
+    </section>
+
+    <!-- Sub-mode selector bar (Only shown on Tab 4: QueryHints for -2 SKIP LOCKED, 0 NOWAIT, 3000 Bounded Wait) -->
+    <section id="submode-bar" class="hidden surface-card rounded-xl p-3.5 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded" style="background: var(--badge-sql-bg); color: var(--badge-sql-text);">Select @QueryHint Timeout Mode</span>
+          <span class="text-xs" style="color: var(--text-secondary);">Unit of <code>jakarta.persistence.lock.timeout</code> is <strong>milliseconds (ms)</strong></span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="switchHintSubmode('skip_locked')" id="subbtn-skip_locked" class="submode-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold">
+            1. lock.timeout = "-2" (SKIP LOCKED Worker Queue)
+          </button>
+          <button onclick="switchHintSubmode('nowait')" id="subbtn-nowait" class="submode-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold">
+            2. lock.timeout = "0" (NOWAIT Fail-Fast)
+          </button>
+          <button onclick="switchHintSubmode('bounded')" id="subbtn-bounded" class="submode-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold">
+            3. lock.timeout = "3000" (3,000ms Bounded Wait)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Overview Matrix & ER Schema (Only shown on Tab 1) -->
+    <section id="overview-matrix-section" class="hidden space-y-5">
+      <!-- Domain Model Visual Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="surface-card rounded-xl p-4 border-l-4" style="border-left-color: var(--accent-primary);">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <span>🏦 Table 1: <code>customer</code> (Parent Entity)</span>
+            </h3>
+            <span class="text-xs font-mono px-2 py-0.5 rounded surface-tertiary">Has @Version</span>
+          </div>
+          <p class="text-xs mb-3" style="color: var(--text-secondary);">
+            Stores customer account state, status (<code>ACTIVE</code> or <code>SUSPENDED</code>), wallet balance, and the optimistic lock <code>@Version</code> column.
+          </p>
+          <div class="grid grid-cols-5 gap-2 text-xs font-mono p-2.5 rounded-lg surface-tertiary">
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">PK</strong>id: Long</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">Col</strong>name: String</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">Rule</strong>status: String</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">Math</strong>balance: Double</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--badge-warn-text)">@Version</strong>version: Long</div>
+          </div>
+        </div>
+
+        <div class="surface-card rounded-xl p-4 border-l-4" style="border-left-color: #10b981;">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <span>💸 Table 2: <code>refund</code> (Child / Queue Entity)</span>
+            </h3>
+            <span class="text-xs font-mono px-2 py-0.5 rounded surface-tertiary">@ManyToOne Customer</span>
+          </div>
+          <p class="text-xs mb-3" style="color: var(--text-secondary);">
+            Stores refund records linked to a <code>Customer</code>, along with processing status (<code>PENDING</code> or <code>COMPLETED</code>) for worker queues.
+          </p>
+          <div class="grid grid-cols-4 gap-2 text-xs font-mono p-2.5 rounded-lg surface-tertiary">
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">PK</strong>id: Long</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">Col</strong>amount: Double</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--text-muted)">Queue</strong>status: String</div>
+            <div><strong class="block text-[10px] uppercase" style="color:var(--badge-sql-text)">FK</strong>customer_id</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Complete Comparison Matrix Table -->
+      <div class="surface-card rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 surface-tertiary border-b flex items-center justify-between">
+          <h3 class="font-bold text-sm">Complete JPA Locking Reference Matrix (Using Customer &amp; Refund Use Cases)</h3>
+          <span class="text-xs" style="color: var(--text-muted);">Click any row to open its interactive code walkthrough</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b surface-secondary" style="color: var(--text-muted);">
+                <th class="py-3 px-4 font-semibold">JPA Annotation / Hint</th>
+                <th class="py-3 px-4 font-semibold">Generated SQL</th>
+                <th class="py-3 px-4 font-semibold">Lock Behavior</th>
+                <th class="py-3 px-4 font-semibold">Customer &amp; Refund Use Case</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y" style="border-color: var(--border-color);">
+              <tr onclick="switchTab('pessimistic_write')" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@Lock(PESSIMISTIC_WRITE)</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-danger-text);">SELECT ... FOR UPDATE</td>
+                <td class="py-3 px-4">Acquires exclusive row lock. Forces concurrent writers &amp; locking readers to queue up until commit.</td>
+                <td class="py-3 px-4">Two threads deducting a refund from the same <code>Customer.balance</code> (takes 20s+ serially instead of 10s).</td>
+              </tr>
+              <tr onclick="switchTab('pessimistic_read')" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@Lock(PESSIMISTIC_READ)</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-warn-text);">SELECT ... FOR SHARE</td>
+                <td class="py-3 px-4">Acquires shared lock. Multiple readers run in parallel (~10s), but blocks any writer from modifying the row.</td>
+                <td class="py-3 px-4">Running a 10s compliance report on <code>Customer</code> while blocking a <code>rogueWriter</code> from changing status/balance.</td>
+              </tr>
+              <tr onclick="switchTab('query_hints'); switchHintSubmode('skip_locked');" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@QueryHint(lock.timeout = "-2")</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-sql-text);">SELECT ... FOR UPDATE SKIP LOCKED</td>
+                <td class="py-3 px-4">Worker Queue: Silently ignores locked rows during index scan and locks the next unlocked row.</td>
+                <td class="py-3 px-4">Worker 1 &amp; Worker 2 polling <code>PENDING</code> rows in the <code>Refund</code> table simultaneously without blocking.</td>
+              </tr>
+              <tr onclick="switchTab('query_hints'); switchHintSubmode('nowait');" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@QueryHint(lock.timeout = "0")</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-danger-text);">SELECT ... FOR UPDATE NOWAIT</td>
+                <td class="py-3 px-4">Fail-Fast: Refuses to wait even 1ms. Throws <code>PessimisticLockingFailureException</code> immediately if locked.</td>
+                <td class="py-3 px-4">Admin attempting to edit a <code>Customer</code> currently locked by a refund settlement job.</td>
+              </tr>
+              <tr onclick="switchTab('query_hints'); switchHintSubmode('bounded');" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@QueryHint(lock.timeout = "3000")</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-warn-text);">SET LOCAL lock_timeout = 3000</td>
+                <td class="py-3 px-4">Bounded Wait: Blocks thread up to 3,000ms (3 seconds) waiting for the lock before aborting with exception.</td>
+                <td class="py-3 px-4">API request updating <code>Customer</code> willing to wait max 3 seconds before failing gracefully.</td>
+              </tr>
+              <tr onclick="switchTab('version_lock')" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@Version (Standard Optimistic)</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-sql-text);">UPDATE ... WHERE id=? AND version=?</td>
+                <td class="py-3 px-4">No DB lock during read. Detects concurrent writes atomically at flush time via updated row count (0 rows = crash).</td>
+                <td class="py-3 px-4">Two admins editing <code>Customer</code> profile or background workers updating balance with <code>@Retryable</code>.</td>
+              </tr>
+              <tr onclick="switchTab('optimistic_strict')" class="hover:opacity-90 cursor-pointer transition">
+                <td class="py-3 px-4 font-mono font-semibold" style="color: var(--accent-secondary);">@Lock(LockModeType.OPTIMISTIC)</td>
+                <td class="py-3 px-4 font-mono" style="color: var(--badge-sql-text);">SELECT version FROM customer WHERE id=?</td>
+                <td class="py-3 px-4">Forces a commit-time version check on a read-only parent entity even when the parent itself was not updated.</td>
+                <td class="py-3 px-4">Ensuring <code>Customer</code> is still <code>ACTIVE</code> when inserting a child <code>Refund</code> (where <code>@Version</code> alone fails!).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         CORE INTERACTIVE SPLIT-PANE: CODE EDITOR (LEFT) + WALKTHROUGH (RIGHT)
+         ======================================================================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+      <!-- LEFT COLUMN: LINE-NUMBERED INTERACTIVE CODE EDITOR (7 COLS ON DESKTOP) -->
+      <div class="lg:col-span-7 code-container rounded-2xl overflow-hidden shadow-xl flex flex-col">
+        <!-- Code Editor Header Bar -->
+        <div class="px-4 py-3 surface-tertiary border-b flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            <span id="code-filename" class="ml-2 font-mono text-xs font-bold" style="color: var(--text-primary);">CustomerRefundLockDemo.java</span>
+          </div>
+
+          <div class="flex items-center gap-2 no-print">
+            <button onclick="toggleHighlightFilter()" id="btn-dim-toggle" class="px-2.5 py-1 rounded text-xs font-medium surface-secondary border hover:opacity-90 transition" title="Dim non-highlighted lines to focus on the current step">
+              🎯 Focus Mode: ON
+            </button>
+            <button onclick="copyCurrentCode()" id="btn-copy-code" class="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold text-white transition shadow" style="background-color: var(--accent-primary);">
+              <span id="copy-icon">📋</span>
+              <span id="copy-text">Copy Code</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Code Editor Body with Line Numbers -->
+        <div id="code-editor-scroll" class="overflow-y-auto max-h-[680px] py-3 select-text">
+          <div id="code-lines-wrapper">
+            <!-- Populated dynamically with line numbers and syntax highlighting -->
+          </div>
+        </div>
+
+        <!-- Code Editor Footer Status Bar -->
+        <div class="px-4 py-2 surface-tertiary border-t flex items-center justify-between text-[11px] font-mono" style="color: var(--text-muted);">
+          <span id="editor-status-left">Java 21 • Spring Boot 3.x • Jakarta Persistence</span>
+          <span id="editor-status-right">Click any line or use Next ▶ to step through</span>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: LINE-BY-LINE INTERACTIVE EXPLAINER (5 COLS ON DESKTOP) -->
+      <div class="lg:col-span-5 flex flex-col gap-4 sticky top-32">
+
+        <!-- Stepper Control Card -->
+        <div class="surface-card rounded-2xl p-5 shadow-xl border-t-4" style="border-top-color: var(--accent-primary);">
+          <!-- Top Navigation Controls: Prev / Next / Reset -->
+          <div class="flex items-center justify-between gap-2 pb-4 mb-4 border-b" style="border-color: var(--border-color);">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider block" style="color: var(--text-muted);">Interactive Code Walkthrough</span>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span id="step-counter-badge" class="text-sm font-extrabold" style="color: var(--accent-secondary);">Step 1 of 6</span>
+                <span id="step-lines-badge" class="text-xs font-mono px-2 py-0.5 rounded surface-tertiary">Lines 1–12</span>
+              </div>
+            </div>
+
+            <!-- Interactive Prev / Next / Reset Buttons -->
+            <div class="flex items-center gap-1.5 no-print">
+              <button onclick="resetStep()" class="px-2.5 py-2 rounded-lg text-xs font-semibold surface-tertiary border hover:opacity-90 transition" title="Reset to Step 1">
+                ↺ Reset
+              </button>
+              <button onclick="prevStep()" id="btn-prev-step" class="px-3.5 py-2 rounded-lg text-xs font-bold surface-tertiary border hover:opacity-90 transition">
+                ◀ Prev
+              </button>
+              <button onclick="nextStep()" id="btn-next-step" class="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md hover:opacity-95 transition" style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
+                Next ▶
+              </button>
+            </div>
+          </div>
+
+          <!-- Jump-to-Step Pills -->
+          <div id="step-pills-container" class="flex flex-wrap gap-1.5 mb-4 no-print">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Current Step Title & Detailed Line-by-Line Explanation -->
+          <div class="space-y-4">
+            <div>
+              <h3 id="step-title" class="text-base sm:text-lg font-extrabold leading-snug mb-2">
+                Step Title
+              </h3>
+              <div id="step-explanation" class="text-sm leading-relaxed space-y-2" style="color: var(--text-secondary);">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Generated SQL & Hibernate Action Box -->
+            <div class="rounded-xl p-3.5 border" style="background-color: var(--bg-code); border-color: var(--border-strong);">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--badge-sql-text);">
+                  <span>⚡ Behind the Scenes: SQL &amp; Hibernate</span>
+                </span>
+                <span id="step-lock-mode-pill" class="text-[11px] font-mono px-2 py-0.5 rounded surface-tertiary">SQL</span>
+              </div>
+              <pre id="step-sql-box" class="font-mono text-xs overflow-x-auto whitespace-pre-wrap leading-relaxed" style="color: var(--badge-sql-text);"></pre>
+            </div>
+
+            <!-- Runtime Thread Timeline & Console Output Box -->
+            <div class="rounded-xl p-3.5 surface-tertiary border">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--badge-warn-text);">
+                  <span>⏱️ Concurrent Thread Timeline &amp; Console Logs</span>
+                </span>
+              </div>
+              <div id="step-timeline-box" class="font-mono text-xs space-y-1.5 leading-relaxed" style="color: var(--text-primary);">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architectural Insight / Common Pitfall Box -->
+        <div id="scenario-pitfall-box" class="surface-card rounded-2xl p-4 shadow-md border-l-4" style="border-left-color: var(--badge-warn-text);">
+          <!-- Populated dynamically -->
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       FOOTER
+       ========================================================================== -->
+  <footer class="mt-8 border-t surface-secondary py-4 px-4 text-xs" style="border-color: var(--border-color); color: var(--text-muted);">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <span>Spring Data JPA Locking Masterclass • Consistent Domain: <code>Customer</code> &amp; <code>Refund</code></span>
+      <span>Tip: Use <strong>◀ Prev / Next ▶</strong> buttons or keyboard <strong>Left / Right Arrow keys</strong> to step line-by-line</span>
+    </div>
+  </footer>
+
+  <!-- ==========================================================================
+       APPLICATION DATA & INTERACTIVE LOGIC
+       ========================================================================== -->
+  <script>
+    // Global State
+    let currentTabKey = 'overview';
+    let currentHintSubmode = 'skip_locked';
+    let currentStepIndex = 0;
+    let focusModeEnabled = true;
+    let currentFontSize = 16;
+    let isReadingAloud = false;
+
+    // ==========================================================================
+    // DATASET: ALL 6 LOCKING TABS + SUBMODES (STRICTLY CUSTOMER & REFUND ENTITIES)
+    // ==========================================================================
+    const LOCK_SCENARIOS = {
+      // ------------------------------------------------------------------------
+      // TAB 1: OVERVIEW & ENTITIES (Customer & Refund Schema)
+      // ------------------------------------------------------------------------
+      overview: {
+        title: "1. Domain Model Overview: Customer & Refund Entities",
+        badge: "Unified Schema",
+        whenToUse: "Every locking mechanism in this guide operates on two tables: Customer (holds account status, wallet balance, and @Version) and Refund (holds refund amount, queue status, and @ManyToOne link to Customer).",
+        goldenRule: "Database locks are tied to the lifecycle of a database transaction (@Transactional), while Optimistic Locks rely on an atomic @Version column check.",
+        pitfallTitle: "Why Keep One Unified Example (`Customer` & `Refund`)?",
+        pitfallText: "Seeing every lock type on the exact same `Customer` and `Refund` tables makes the trade-offs crystal clear: when modifying `Customer.balance` under high contention (`PESSIMISTIC_WRITE`), auditing a customer (`PESSIMISTIC_READ`), polling a queue of `PENDING` refunds (`SKIP LOCKED`), or enforcing cross-table rules where only `ACTIVE` customers can receive a `Refund` (`LockModeType.OPTIMISTIC`).",
+        filename: "CustomerAndRefundEntities.java",
+        code: [
+          "package com.example.locking.entity;",
+          "",
+          "import jakarta.persistence.*;",
+          "",
+          "@Entity",
+          "@Table(name = \"customer\")",
+          "public class Customer {",
+          "    @Id",
+          "    @GeneratedValue(strategy = GenerationType.IDENTITY)",
+          "    private Long id;",
+          "",
+          "    private String name;",
+          "",
+          "    // Business Rule State: \"ACTIVE\" or \"SUSPENDED\"",
+          "    private String status;",
+          "",
+          "    // Customer wallet/account balance",
+          "    private Double balance;",
+          "",
+          "    // Managed automatically by Hibernate for Optimistic Locking",
+          "    @Version",
+          "    private Long version;",
+          "",
+          "    // Standard getters and setters...",
+          "}",
+          "",
+          "@Entity",
+          "@Table(name = \"refund\")",
+          "public class Refund {",
+          "    @Id",
+          "    @GeneratedValue(strategy = GenerationType.IDENTITY)",
+          "    private Long id;",
+          "",
+          "    private Double amount;",
+          "",
+          "    // Worker Queue State: \"PENDING\" or \"COMPLETED\"",
+          "    private String status;",
+          "",
+          "    @ManyToOne(fetch = FetchType.LAZY)",
+          "    @JoinColumn(name = \"customer_id\")",
+          "    private Customer customer;",
+          "",
+          "    // Standard getters and setters...",
+          "}"
+        ],
+        steps: [
+          {
+            title: "Customer Entity Definition & Primary Key",
+            lines: [5, 12],
+            sql: "CREATE TABLE customer (\n  id BIGSERIAL PRIMARY KEY,\n  name VARCHAR(255), ...\n);",
+            timeline: "• The `Customer` row (e.g., ID = 1L) is the primary target of row-level locks (`FOR UPDATE` / `FOR SHARE`) and version checks.",
+            explanation: "We define the `Customer` JPA entity mapped to the `customer` table. Its primary key `id` uniquely identifies the row that database locks will target in our `WHERE c.id = :id` queries."
+          },
+          {
+            title: "Customer Business State (`status` and `balance`)",
+            lines: [14, 18],
+            sql: "-- Columns protected by our locking strategies:\nstatus VARCHAR(50),  -- 'ACTIVE' or 'SUSPENDED'\nbalance DOUBLE PRECISION",
+            timeline: "• `balance`: Protected against lost updates during concurrent writes.\n• `status`: Checked during cross-entity `Refund` creation (`ACTIVE` vs `SUSPENDED`).",
+            explanation: "These two fields represent our core business invariants: `status` determines whether a customer is allowed to receive a refund (`ACTIVE` vs `SUSPENDED`), and `balance` tracks funds that cannot be corrupted by concurrent threads."
+          },
+          {
+            title: "The `@Version` Column for Optimistic Locking",
+            lines: [20, 22],
+            sql: "version BIGINT NOT NULL DEFAULT 0\n-- Incremented automatically on every UPDATE",
+            timeline: "• Thread A reads version = 0.\n• When flushing an update, Hibernate appends `WHERE id = ? AND version = 0`.",
+            explanation: "Adding `@Version` instructs Hibernate to track concurrent modifications without holding database locks during reads. It is required for both standard `@Version` locking (Tab 5) and explicit `LockModeType.OPTIMISTIC` cross-entity verification (Tab 6)."
+          },
+          {
+            title: "Refund Entity & Worker Queue `status`",
+            lines: [27, 37],
+            sql: "CREATE TABLE refund (\n  id BIGSERIAL PRIMARY KEY,\n  amount DOUBLE PRECISION,\n  status VARCHAR(50), -- 'PENDING' or 'COMPLETED'\n  customer_id BIGINT REFERENCES customer(id)\n);",
+            timeline: "• Multiple background workers scan `status = 'PENDING'` using `SKIP LOCKED` (`lock.timeout = -2`) in Tab 4.",
+            explanation: "The `Refund` entity serves two roles in our study guide: (1) a child record created when issuing a refund to an `ACTIVE` customer, and (2) a task queue table where background workers pick up `PENDING` refunds in parallel."
+          },
+          {
+            title: "Cross-Entity Relationship (`@ManyToOne Customer`)",
+            lines: [39, 43],
+            sql: "ALTER TABLE refund ADD CONSTRAINT fk_customer\n  FOREIGN KEY (customer_id) REFERENCES customer(id);",
+            timeline: "• Inserting a `Refund` writes to the `refund` table, NOT the `customer` table.\n• That's why `@Lock(LockModeType.OPTIMISTIC)` is essential in Tab 6!",
+            explanation: "Each `Refund` belongs to a `Customer`. When a transaction reads a `Customer` and inserts a new `Refund`, the `customer` table itself receives no `UPDATE` statement—which is why we need special locking to prevent issuing refunds to a customer who gets `SUSPENDED` mid-transaction."
+          }
+        ]
+      },
+
+      // ------------------------------------------------------------------------
+      // TAB 2: PESSIMISTIC_WRITE (SELECT ... FOR UPDATE)
+      // ------------------------------------------------------------------------
+      pessimistic_write: {
+        title: "2. @Lock(LockModeType.PESSIMISTIC_WRITE) — Exclusive Row Lock",
+        badge: "SELECT ... FOR UPDATE",
+        whenToUse: "Use when high contention is expected on the exact same row (e.g., two threads simultaneously updating a Customer's balance or status) and you want threads to safely queue up one-by-one rather than failing with exceptions.",
+        goldenRule: "You MUST annotate the service method with @Transactional. Without @Transactional, the lock is acquired and immediately released the moment the repository method returns, and the entity becomes detached!",
+        pitfallTitle: "Why did it take 20+ seconds with @Transactional + @Lock, vs ~10 seconds without?",
+        pitfallText: "With both `@Transactional` and `PESSIMISTIC_WRITE` active, Thread A holds the exclusive database row lock during its entire 10-second sleep. Thread B freezes at `findUserById` for ~9.5 seconds waiting for Thread A to commit, then runs its own 10-second sleep—totaling 20+ seconds serially. Without `@Transactional`, the short-lived repository transaction commits immediately, releasing the lock before `Thread.sleep(10000)` and detaching the entity so the update never flushes!",
+        filename: "PessimisticWriteCustomerDemo.java",
+        code: [
+          "public interface CustomerRepository extends JpaRepository<Customer, Long> {",
+          "",
+          "    // Derived query method works directly with @Lock (no custom @Query required!)",
+          "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+          "    Optional<Customer> findCustomerById(Long id);",
+          "}",
+          "",
+          "@Service",
+          "public class CustomerRefundService {",
+          "    private final CustomerRepository customerRepository;",
+          "",
+          "    public CustomerRefundService(CustomerRepository customerRepository) {",
+          "        this.customerRepository = customerRepository;",
+          "    }",
+          "",
+          "    @Transactional // MANDATORY: Keeps transaction open & holds the DB lock!",
+          "    public void processRefundWithExclusiveLock(Long customerId, Double refundAmount) {",
+          "        // 1. Executes SELECT ... FOR UPDATE (acquires exclusive row lock)",
+          "        Customer customer = customerRepository.findCustomerById(customerId).orElseThrow();",
+          "",
+          "        // 2. Pause thread for 10s to simulate heavy payment gateway processing.",
+          "        // Any other thread trying to lock this Customer row FREEZES at step 1!",
+          "        try {",
+          "            Thread.sleep(10000);",
+          "        } catch (InterruptedException e) {",
+          "            Thread.currentThread().interrupt();",
+          "        }",
+          "",
+          "        // 3. Modify managed entity. Flushed & lock released when method commits.",
+          "        customer.setBalance(customer.getBalance() + refundAmount);",
+          "    }",
+          "}",
+          "",
+          "@Component",
+          "public class ExclusiveLockRunner implements CommandLineRunner {",
+          "    private final CustomerRefundService service;",
+          "    public ExclusiveLockRunner(CustomerRefundService service) { this.service = service; }",
+          "",
+          "    @Override",
+          "    public void run(String... args) throws Exception {",
+          "        ExecutorService executor = Executors.newFixedThreadPool(2);",
+          "",
+          "        // Thread A grabs the exclusive lock on Customer #1 for 10 seconds",
+          "        executor.submit(() -> {",
+          "            System.out.println(\"Thread A trying to get lock...\");",
+          "            service.processRefundWithExclusiveLock(1L, 50.0);",
+          "            System.out.println(\"Thread A finished!\");",
+          "        });",
+          "",
+          "        Thread.sleep(500); // Give Thread A a 500ms head start",
+          "",
+          "        // Thread B prints 'trying...' then FREEZES for ~9.5s until Thread A commits!",
+          "        executor.submit(() -> {",
+          "            System.out.println(\"Thread B trying to get lock...\");",
+          "            service.processRefundWithExclusiveLock(1L, 25.0);",
+          "            System.out.println(\"Thread B finished!\");",
+          "        });",
+          "        executor.shutdown();",
+          "    }",
+          "}"
+        ],
+        steps: [
+          {
+            title: "Repository: `@Lock(LockModeType.PESSIMISTIC_WRITE)` on Derived Query",
+            lines: [1, 6],
+            sql: "SELECT c.id, c.name, c.status, c.balance, c.version\nFROM customer c\nWHERE c.id = ?\nFOR UPDATE;",
+            timeline: "• You do NOT need a custom `@Query`. Spring Data JPA parses `findCustomerById` and appends `FOR UPDATE` automatically.",
+            explanation: "Applying `@Lock(LockModeType.PESSIMISTIC_WRITE)` to a standard Spring Data JPA query method instructs the database to place an **Exclusive Row Lock** on the matching `Customer` record."
+          },
+          {
+            title: "Why `@Transactional` on the Service Method is Mandatory",
+            lines: [16, 17],
+            sql: "BEGIN TRANSACTION;\n-- Lock stays alive ONLY until COMMIT or ROLLBACK",
+            timeline: "• WITH `@Transactional`: Lock held for full 10s -> Total time = ~20.0s.\n• WITHOUT `@Transactional`: Repo transaction commits immediately -> Lock released in 2ms, entity becomes detached, update is lost, and both threads finish in ~10.0s!",
+            explanation: "Database row locks cannot exist outside a transaction. Without `@Transactional` here, Spring creates a tiny transaction just for `findCustomerById()`, commits it immediately when the method returns (releasing the lock!), and returns a **detached** `Customer` object."
+          },
+          {
+            title: "Acquiring the Exclusive Lock (`SELECT ... FOR UPDATE`)",
+            lines: [18, 20],
+            sql: "SELECT ... FROM customer WHERE id = 1 FOR UPDATE;",
+            timeline: "• 00.0s: Thread A executes this line and acquires the exclusive lock.\n• 00.5s: Thread B executes this exact line and **FREEZES** inside the JDBC call waiting for Thread A.",
+            explanation: "When Thread A runs `findCustomerById(1L)`, the database locks row `id = 1`. Nobody else can acquire a write lock or shared read lock on Customer #1 until Thread A's transaction ends."
+          },
+          {
+            title: "Simulating Long Processing (`Thread.sleep(10000)`)",
+            lines: [21, 27],
+            sql: "-- Database holds row lock on customer(id=1) while Java thread sleeps",
+            timeline: "• 00.0s – 10.0s: Thread A sleeps.\n• 00.5s – 10.0s: Thread B is completely blocked at the database level.",
+            explanation: "While Thread A pauses for 10 seconds, the database transaction remains open. Thread B is stuck waiting at line 19 and cannot enter this sleep block yet."
+          },
+          {
+            title: "Dirty Checking Flush & Lock Release at Commit",
+            lines: [29, 31],
+            sql: "UPDATE customer SET balance = ?, version = ? WHERE id = 1 AND version = ?;\nCOMMIT; -- <-- Exclusive Row Lock is finally released here!",
+            timeline: "• 10.0s: Thread A updates balance, flushes SQL, and commits.\n• 10.0s: Thread B immediately unfreezes, reads the updated balance, and starts its own 10s sleep!",
+            explanation: "Because the `Customer` entity is managed inside `@Transactional`, Hibernate automatically detects the balance change (dirty checking), sends the `UPDATE` statement, commits the transaction, and releases the lock."
+          },
+          {
+            title: "Multi-Threaded Verification (`ExecutorService`)",
+            lines: [40, 58],
+            sql: "-- Console Output:\n-- 00.0s: Thread A trying to get lock...\n-- 00.5s: Thread B trying to get lock... (hangs for 9.5s)\n-- 10.0s: Thread A finished!\n-- 20.0s: Thread B finished! (Total time: ~20,050 ms)",
+            timeline: "• Thread A: 0s -> 10s\n• Thread B: Waits 0.5s->10s, then sleeps 10s->20s.\n• Total elapsed wall time: 20+ seconds!",
+            explanation: "Using `CommandLineRunner` and a 2-thread `ExecutorService`, you can observe `Thread B trying to get lock...` print in your IDE/terminal console and then freeze for 9.5 seconds before Thread A finishes."
+          }
+        ]
+      },
+
+      // ------------------------------------------------------------------------
+      // TAB 3: PESSIMISTIC_READ (SELECT ... FOR SHARE)
+      // ------------------------------------------------------------------------
+      pessimistic_read: {
+        title: "3. @Lock(LockModeType.PESSIMISTIC_READ) — Shared Read Lock",
+        badge: "SELECT ... FOR SHARE",
+        whenToUse: "Use when running a slow calculation, audit, or financial report on a Customer and you MUST guarantee no writer changes the Customer while you are reading, yet you want other readers/reports to run concurrently without blocking each other.",
+        goldenRule: "Never use PESSIMISTIC_READ if your transaction intends to modify the locked row! If two threads hold a Shared Lock on the same Customer and both call saveAndFlush(), they will wait on each other forever and trigger a Database Deadlock.",
+        pitfallTitle: "Why did `rogueWriter` take 4.6 seconds even though it has NO `Thread.sleep()`?",
+        pitfallText: "In your logs (`15:21:43.686` to `15:21:48.285`), `rogueWriter` has zero sleep statements—it should finish in 5 milliseconds! However, because Thread 1 held a `PESSIMISTIC_READ` lock (`FOR SHARE`) for 5 seconds, the database blocked `rogueWriter` at `saveAndFlush()` for 4.6 seconds until Thread 1 finished at `15:21:48.283`. Exactly 2ms later (`15:21:48.285`), `rogueWriter` was allowed to complete!",
+        filename: "PessimisticReadAuditVsRogueWriter.java",
+        code: [
+          "public interface CustomerRepository extends JpaRepository<Customer, Long> {",
+          "",
+          "    // Scenario 1: Default JPA Read (No Lock - MVCC snapshot)",
+          "    Optional<Customer> findById(Long id);",
+          "",
+          "    // Scenario 2: Shared Read Lock (Allows other readers, BLOCKS writers!)",
+          "    @Lock(LockModeType.PESSIMISTIC_READ)",
+          "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+          "    Optional<Customer> findByIdForSharedRead(@Param(\"id\") Long id);",
+          "}",
+          "",
+          "@Service",
+          "public class CustomerAuditService {",
+          "    private final CustomerRepository customerRepository;",
+          "",
+          "    public CustomerAuditService(CustomerRepository customerRepository) {",
+          "        this.customerRepository = customerRepository;",
+          "    }",
+          "",
+          "    // PROTECTED READER: Acquires shared lock (FOR SHARE) and sleeps 5 seconds",
+          "    @Transactional",
+          "    public void readWithPessimisticRead(Long id) throws InterruptedException {",
+          "        Customer c = customerRepository.findByIdForSharedRead(id).orElseThrow();",
+          "        log.info(\"readWithPessimisticRead >>>>> read customer: {}\", c);",
+          "        Thread.sleep(5000); // Simulate 5-second compliance report calculation",
+          "    }",
+          "",
+          "    // THE ROGUE WRITER: Has NO sleep, tries to update the Customer immediately!",
+          "    @Transactional",
+          "    public void rogueWriter(Long id, String newName) {",
+          "        log.info(\"rogueWriter >>>> begin\");",
+          "        Customer c = customerRepository.findById(id).orElseThrow();",
+          "        c.setName(newName);",
+          "        // Forces immediate SQL UPDATE while Reader still holds FOR SHARE lock!",
+          "        customerRepository.saveAndFlush(c);",
+          "        log.info(\"rogueWriter >>>> end >>> customer: {}\", c);",
+          "    }",
+          "}",
+          "",
+          "@Component",
+          "public class SharedLockVerifyRunner implements CommandLineRunner {",
+          "    private final CustomerAuditService service;",
+          "    public SharedLockVerifyRunner(CustomerAuditService service) { this.service = service; }",
+          "",
+          "    @Override",
+          "    public void run(String... args) throws Exception {",
+          "        ExecutorService executor = Executors.newFixedThreadPool(2);",
+          "",
+          "        // Thread 1 (Reader): Grabs Shared Lock at 43.274s and sleeps 5s",
+          "        executor.submit(() -> {",
+          "            service.readWithPessimisticRead(1L);",
+          "            log.info(\"Thread 1 (Reader) finished!\");",
+          "        });",
+          "",
+          "        Thread.sleep(400); // Rogue writer starts 400ms later at 43.686s",
+          "",
+          "        // Thread 2 (Rogue Writer): Freezes at saveAndFlush() for 4.6 seconds!",
+          "        executor.submit(() -> {",
+          "            service.rogueWriter(1L, \"Asterisk\");",
+          "            log.info(\"Thread 2 (Rogue Writer) finished!\");",
+          "        });",
+          "        executor.shutdown();",
+          "    }",
+          "}"
+        ],
+        steps: [
+          {
+            title: "Standard Read vs `@Lock(LockModeType.PESSIMISTIC_READ)`",
+            lines: [1, 10],
+            sql: "-- Standard findById:\nSELECT * FROM customer WHERE id = 1;\n\n-- findByIdForSharedRead:\nSELECT * FROM customer WHERE id = 1 FOR SHARE;",
+            timeline: "• Two threads calling `findByIdForSharedRead(1L)` simultaneously will BOTH succeed immediately and finish in ~5s total (shared museum painting analogy).",
+            explanation: "Unlike `PESSIMISTIC_WRITE` (private changing room), `PESSIMISTIC_READ` is a **Shared Lock** (`SELECT ... FOR SHARE`). Fifty reader threads can hold this lock on Customer #1 at the exact same time without blocking each other."
+          },
+          {
+            title: "Protected Reader Method (`readWithPessimisticRead`)",
+            lines: [20, 26],
+            sql: "SELECT c.id, c.name, c.status, c.balance, c.version FROM customer c WHERE c.id = 1 FOR SHARE;\n-- Lock held for 5,000ms while report runs",
+            timeline: "• `15:21:43.274`: Thread 1 acquires `FOR SHARE` lock on Customer #1 (`name=X`) and begins its 5-second report.",
+            explanation: "Thread 1 reads the `Customer` with `FOR SHARE` and sleeps for 5,000ms to simulate generating a customer audit report where the customer's data must not change mid-calculation."
+          },
+          {
+            title: "The Rogue Writer Entering Mid-Report",
+            lines: [28, 33],
+            sql: "SELECT * FROM customer WHERE id = 1;\n-- Unlocked read succeeds, Java object modified in memory",
+            timeline: "• `15:21:43.686`: Thread 2 logs `rogueWriter >>>> begin`, fetches Customer #1 without a lock, and sets `name = 'Asterisk'` in memory.",
+            explanation: "400ms after Thread 1 starts sleeping, `rogueWriter` begins. Notice it has **no `Thread.sleep()`**—without a lock, it would finish in a few milliseconds."
+          },
+          {
+            title: "Why `saveAndFlush(c)` Freezes the Rogue Writer for 4.6 Seconds",
+            lines: [34, 37],
+            sql: "UPDATE customer SET name = 'Asterisk', version = 1 WHERE id = 1 AND version = 0;\n-- BLOCKED BY DATABASE! Cannot acquire exclusive write lock while FOR SHARE is active!",
+            timeline: "• `15:21:43.686` -> `15:21:48.283`: Thread 2 is frozen inside `saveAndFlush()` for 4.6 seconds!\n• `15:21:48.283`: Thread 1 finishes its 5s sleep and releases the shared lock.\n• `15:21:48.285` (2ms later!): `rogueWriter` finally unfreezes and logs `end`!",
+            explanation: "When `rogueWriter` executes `saveAndFlush(c)`, the database must acquire an exclusive write lock to run the `UPDATE`. Because Thread 1 holds a `FOR SHARE` lock, the database forces `rogueWriter` to wait in line for 4.6 seconds until Thread 1 commits!"
+          },
+          {
+            title: "Timestamp Proof in the Console Runner",
+            lines: [48, 62],
+            sql: "-- Console Timestamp Breakdown:\n15:21:43.274 [thread-1] readWithPessimisticRead >>> User(id=1, name=X)\n15:21:43.686 [thread-2] rogueWriter >>>> begin\n15:21:48.283 [thread-1] Thread 1 finished! (5s elapsed)\n15:21:48.285 [thread-2] rogueWriter >>>> end >>> User(id=1, name=Asterisk)",
+            timeline: "• Without `@Lock(PESSIMISTIC_READ)`: `rogueWriter` finishes at `43.695s` right under Thread 1's nose.\n• With `@Lock(PESSIMISTIC_READ)`: `rogueWriter` is delayed until `48.285s`!",
+            explanation: "Comparing the timestamps proves that `PESSIMISTIC_READ` protected the reader for the entire 5-second window, preventing the writer from mutating the row until the audit finished. (And if two `PESSIMISTIC_READ` threads both call `saveAndFlush()`, neither can upgrade to an exclusive lock, triggering a **Deadlock**!)"
+          }
+        ]
+      },
+
+      // ------------------------------------------------------------------------
+      // TAB 4: QUERY HINTS (3 Interactive Sub-Modes: -2 SKIP LOCKED, 0 NOWAIT, 3000 BOUNDED)
+      // ------------------------------------------------------------------------
+      query_hints: {
+        submodes: {
+          // SUBMODE 4A: lock.timeout = "-2" (SKIP LOCKED)
+          skip_locked: {
+            title: "4A. @QueryHint(lock.timeout = \"-2\") — SKIP LOCKED Worker Queue",
+            badge: "SELECT ... FOR UPDATE SKIP LOCKED",
+            whenToUse: "The gold standard for building SQL-backed Worker Queues. Multiple background worker threads poll the `Refund` table for `PENDING` refunds simultaneously without blocking or crashing each other.",
+            goldenRule: "Setting `jakarta.persistence.lock.timeout` to `\"-2\"` instructs Hibernate to append `FOR UPDATE SKIP LOCKED`. Locked rows are silently bypassed during the index scan.",
+            pitfallTitle: "Why use `-2` (`SKIP LOCKED`) instead of a standard `PESSIMISTIC_WRITE` lock for queues?",
+            pitfallText: "With a standard `PESSIMISTIC_WRITE` lock, Worker 2 tries to lock Refund #1, sees Worker 1 holding it, and freezes for 5 seconds waiting—Even though Refund #2 is sitting unlocked right below it! With `lock.timeout = \"-2\"`, Worker 2 silently skips locked Refund #1 and immediately locks Refund #2, doubling throughput.",
+            filename: "SkipLockedRefundQueueDemo.java",
+            code: [
+              "public interface RefundRepository extends JpaRepository<Refund, Long> {",
+              "",
+              "    // Grabs the first 'PENDING' Refund that is NOT currently locked by another worker",
+              "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+              "    @QueryHints({",
+              "        @QueryHint(name = \"jakarta.persistence.lock.timeout\", value = \"-2\")",
+              "    })",
+              "    Optional<Refund> findFirstByStatusOrderByIdAsc(String status);",
+              "}",
+              "",
+              "@Service",
+              "public class RefundQueueWorkerService {",
+              "    private final RefundRepository refundRepository;",
+              "",
+              "    public RefundQueueWorkerService(RefundRepository refundRepository) {",
+              "        this.refundRepository = refundRepository;",
+              "    }",
+              "",
+              "    @Transactional",
+              "    public void processNextPendingRefund(String workerName) {",
+              "        System.out.println(workerName + \" scanning for a PENDING refund...\");",
+              "",
+              "        // Executes SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1",
+              "        Optional<Refund> optRefund = refundRepository.findFirstByStatusOrderByIdAsc(\"PENDING\");",
+              "",
+              "        if (optRefund.isPresent()) {",
+              "            Refund refund = optRefund.get();",
+              "            System.out.println(workerName + \" locked Refund ID: \" + refund.getId());",
+              "",
+              "            // Simulate 5 seconds of bank payout processing",
+              "            try { Thread.sleep(5000); } catch (InterruptedException e) {}",
+              "",
+              "            refund.setStatus(\"COMPLETED\");",
+              "            System.out.println(workerName + \" COMPLETED Refund ID: \" + refund.getId());",
+              "        } else {",
+              "            System.out.println(workerName + \" found no unlocked PENDING refunds.\");",
+              "        }",
+              "    }",
+              "}",
+              "",
+              "@Component",
+              "public class WorkerQueueRunner implements CommandLineRunner {",
+              "    private final RefundQueueWorkerService workerService;",
+              "    public WorkerQueueRunner(RefundQueueWorkerService s) { this.workerService = s; }",
+              "",
+              "    @Override",
+              "    public void run(String... args) throws Exception {",
+              "        // Assume DB has Refund ID=101 (PENDING) and Refund ID=102 (PENDING)",
+              "        ExecutorService executor = Executors.newFixedThreadPool(2);",
+              "",
+              "        // Worker 1 starts and locks Refund ID=101",
+              "        executor.submit(() -> workerService.processNextPendingRefund(\"Worker-1\"));",
+              "",
+              "        Thread.sleep(500); // Give Worker 1 500ms to lock Refund #101",
+              "",
+              "        // Worker 2 starts, silently SKIPS locked Refund #101, and grabs Refund #102!",
+              "        executor.submit(() -> workerService.processNextPendingRefund(\"Worker-2\"));",
+              "        executor.shutdown();",
+              "    }",
+              "}"
+            ],
+            steps: [
+              {
+                title: "Configuring `@QueryHints` with `lock.timeout = \"-2\"`",
+                lines: [3, 8],
+                sql: "SELECT r.id, r.amount, r.status, r.customer_id\nFROM refund r\nWHERE r.status = 'PENDING'\nORDER BY r.id ASC\nLIMIT 1\nFOR UPDATE SKIP LOCKED;",
+                timeline: "• Special JPA magic value `\"-2\"` = `SKIP LOCKED`.\n• Combined with `findFirstBy...`, it fetches and locks a single available task.",
+                explanation: "In JPA/Hibernate, passing `@QueryHint(name = \"jakarta.persistence.lock.timeout\", value = \"-2\")` alongside `@Lock(LockModeType.PESSIMISTIC_WRITE)` instructs PostgreSQL/MySQL/Oracle to append `FOR UPDATE SKIP LOCKED`."
+              },
+              {
+                title: "Worker Scanning for Next Available `PENDING` Refund",
+                lines: [19, 25],
+                sql: "-- Worker 1 locks row id=101.\n-- Worker 2 scans index: sees id=101 is locked, skips it, locks id=102!",
+                timeline: "• 00.0s: Worker-1 runs query -> Returns Refund #101.\n• 00.5s: Worker-2 runs exact same query -> Immediately returns Refund #102!",
+                explanation: "When Worker-2 calls `findFirstByStatusOrderByIdAsc(\"PENDING\")` while Worker-1 is still sleeping, the database does not block Worker-2 or throw an error—it simply ignores locked row #101 and hands #102 to Worker-2."
+              },
+              {
+                title: "Parallel Processing & Status Transition to `COMPLETED`",
+                lines: [26, 38],
+                sql: "UPDATE refund SET status = 'COMPLETED' WHERE id = 101; -- Worker 1\nUPDATE refund SET status = 'COMPLETED' WHERE id = 102; -- Worker 2",
+                timeline: "• Both workers sleep 5s in parallel.\n• Total execution time for 2 refunds = ~5.5 seconds (instead of 10+ seconds!).",
+                explanation: "Each worker holds an exclusive lock on its own distinct `Refund` row, processes the payout in parallel, updates `status` to `COMPLETED`, and commits."
+              },
+              {
+                title: "Running Concurrent Queue Workers",
+                lines: [47, 58],
+                sql: "-- Console Output:\n-- 00.0s: Worker-1 scanning for a PENDING refund...\n-- 00.0s: Worker-1 locked Refund ID: 101\n-- 00.5s: Worker-2 scanning for a PENDING refund...\n-- 00.5s: Worker-2 locked Refund ID: 102\n-- 05.0s: Worker-1 COMPLETED Refund ID: 101\n-- 05.5s: Worker-2 COMPLETED Refund ID: 102",
+                timeline: "• Zero thread blocking, zero lock exceptions, 100% parallel queue consumption.",
+                explanation: "If a 3rd worker runs when only 2 `PENDING` rows exist, `findFirstByStatusOrderByIdAsc` immediately returns `Optional.empty()` rather than blocking."
+              }
+            ]
+          },
+
+          // SUBMODE 4B: lock.timeout = "0" (NOWAIT)
+          nowait: {
+            title: "4B. @QueryHint(lock.timeout = \"0\") — NOWAIT (Fail-Fast)",
+            badge: "SELECT ... FOR UPDATE NOWAIT",
+            whenToUse: "Use when you want to prevent thread-pool exhaustion and fail immediately if a Customer row is already locked by another transaction, rather than freezing the caller's thread.",
+            goldenRule: "Setting `jakarta.persistence.lock.timeout` to `\"0\"` (0 milliseconds) tells the database: 'If this row is locked, do not wait even 1ms—throw PessimisticLockingFailureException immediately.'",
+            pitfallTitle: "Why Fail-Fast (`NOWAIT`) Matters in Web Applications",
+            pitfallText: "If a slow batch job locks a `Customer` row for 30 seconds and 200 HTTP requests try to update that same `Customer` with standard `PESSIMISTIC_WRITE`, all 200 Tomcat threads will freeze waiting, crashing your entire web server! With `lock.timeout = \"0\"`, competing threads abort in 1ms so you can return a friendly 'Operation in progress, please try again shortly' message.",
+            filename: "NoWaitFailFastCustomerDemo.java",
+            code: [
+              "public interface CustomerRepository extends JpaRepository<Customer, Long> {",
+              "",
+              "    // Thread A uses standard lock (waits by default)",
+              "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+              "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+              "    Optional<Customer> findByIdForUpdate(@Param(\"id\") Long id);",
+              "",
+              "    // Thread B uses NOWAIT lock (timeout = 0 milliseconds)",
+              "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+              "    @QueryHints({",
+              "        @QueryHint(name = \"jakarta.persistence.lock.timeout\", value = \"0\")",
+              "    })",
+              "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+              "    Optional<Customer> findByIdForUpdateNoWait(@Param(\"id\") Long id);",
+              "}",
+              "",
+              "@Service",
+              "public class CustomerNoWaitService {",
+              "    private final CustomerRepository customerRepository;",
+              "",
+              "    public CustomerNoWaitService(CustomerRepository customerRepository) {",
+              "        this.customerRepository = customerRepository;",
+              "    }",
+              "",
+              "    @Transactional",
+              "    public void lockCustomerAndSleep(Long id) {",
+              "        customerRepository.findByIdForUpdate(id).orElseThrow();",
+              "        System.out.println(\"Thread A locked Customer #\" + id + \". Sleeping 5s...\");",
+              "        try { Thread.sleep(5000); } catch (InterruptedException e) {}",
+              "    }",
+              "",
+              "    @Transactional",
+              "    public void tryUpdateCustomerNoWait(Long id, String newStatus) {",
+              "        // Throws PessimisticLockingFailureException INSTANTLY if locked!",
+              "        Customer c = customerRepository.findByIdForUpdateNoWait(id).orElseThrow();",
+              "        c.setStatus(newStatus);",
+              "    }",
+              "}",
+              "",
+              "@Component",
+              "public class NoWaitRunner implements CommandLineRunner {",
+              "    private final CustomerNoWaitService service;",
+              "    public NoWaitRunner(CustomerNoWaitService service) { this.service = service; }",
+              "",
+              "    @Override",
+              "    public void run(String... args) throws Exception {",
+              "        ExecutorService executor = Executors.newFixedThreadPool(2);",
+              "        executor.submit(() -> service.lockCustomerAndSleep(1L));",
+              "",
+              "        Thread.sleep(500); // Ensure Thread A holds the lock",
+              "",
+              "        executor.submit(() -> {",
+              "            System.out.println(\"Thread B trying to lock with NOWAIT...\");",
+              "            try {",
+              "                service.tryUpdateCustomerNoWait(1L, \"SUSPENDED\");",
+              "            } catch (Exception e) {",
+              "                // Prints IMMEDIATELY at 0.5s (does NOT wait 5 seconds!)",
+              "                System.out.println(\"Thread B Failed Instantly: \" + e.getClass().getSimpleName());",
+              "            }",
+              "        });",
+              "        executor.shutdown();",
+              "    }",
+              "}"
+            ],
+            steps: [
+              {
+                title: "Declaring `@QueryHint(name = \"jakarta.persistence.lock.timeout\", value = \"0\")`",
+                lines: [8, 14],
+                sql: "SELECT c.id, c.name, c.status, c.balance, c.version\nFROM customer c\nWHERE c.id = ?\nFOR UPDATE NOWAIT;",
+                timeline: "• `value = \"0\"` means 0ms wait tolerance.\n• Note: Use `jakarta.persistence.lock.timeout` in Spring Boot 3+ (`javax.persistence.lock.timeout` in Boot 2.x).",
+                explanation: "We pass a `@QueryHint` with `value = \"0\"` inside `@QueryHints`. Hibernate translates this into `SELECT ... FOR UPDATE NOWAIT`."
+              },
+              {
+                title: "Thread A Acquires and Holds the Exclusive Lock",
+                lines: [25, 30],
+                sql: "SELECT ... FROM customer WHERE id = 1 FOR UPDATE;\n-- Held for 5,000ms",
+                timeline: "• 00.0s: Thread A locks Customer #1 and enters a 5-second sleep.",
+                explanation: "Thread A locks Customer #1 first, simulating an ongoing refund settlement transaction."
+              },
+              {
+                title: "Thread B Executes `findByIdForUpdateNoWait` and Aborts Instantly",
+                lines: [32, 37],
+                sql: "SELECT ... FROM customer WHERE id = 1 FOR UPDATE NOWAIT;\n-- ERROR: could not obtain lock on row in relation \"customer\"",
+                timeline: "• 00.500s: Thread B calls `findByIdForUpdateNoWait(1L)`.\n• 00.502s: Database immediately rejects the query; Spring throws `PessimisticLockingFailureException` (or `CannotAcquireLockException`).",
+                explanation: "Instead of freezing for the remaining 4.5 seconds of Thread A's sleep, line 35 throws an exception in ~2 milliseconds."
+              },
+              {
+                title: "Catching the Instant Failure in the Runner",
+                lines: [52, 60],
+                sql: "-- Console Output:\n-- 00.0s: Thread A locked Customer #1. Sleeping 5s...\n-- 00.5s: Thread B trying to lock with NOWAIT...\n-- 00.5s: Thread B Failed Instantly: CannotAcquireLockException",
+                timeline: "• Thread B returns control to your application at 0.5s while Thread A finishes its sleep in the background until 5.0s.",
+                explanation: "Your catch block catches the exception immediately at the 0.5-second mark, freeing the thread to handle other requests."
+              }
+            ]
+          },
+
+          // SUBMODE 4C: lock.timeout = "3000" (BOUNDED WAIT)
+          bounded: {
+            title: "4C. @QueryHint(lock.timeout = \"3000\") — 3,000ms Bounded Wait",
+            badge: "SET LOCAL lock_timeout = 3000",
+            whenToUse: "Use when you want a thread to patiently wait a reasonable amount of time (e.g., 3,000 milliseconds = 3 seconds) for a short lock to clear, but abort if the lock holder is stuck for too long.",
+            goldenRule: "The unit of `jakarta.persistence.lock.timeout` in JPA is always MILLISECONDS (`\"3000\"` = 3 seconds).",
+            pitfallTitle: "Database Dialect Differences for Bounded Wait (`3000` ms)",
+            pitfallText: "While JPA specifies `lock.timeout` in milliseconds, database engines implement it differently under the hood: PostgreSQL executes `SET LOCAL lock_timeout = 3000` (exact ms); Oracle rounds to seconds (`FOR UPDATE WAIT 3`); MySQL/MariaDB historically lack per-query wait clauses and may fall back to the session/global `innodb_lock_wait_timeout`.",
+            filename: "BoundedWaitCustomerDemo.java",
+            code: [
+              "public interface CustomerRepository extends JpaRepository<Customer, Long> {",
+              "",
+              "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+              "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+              "    Optional<Customer> findByIdForUpdate(@Param(\"id\") Long id);",
+              "",
+              "    // Waits up to 3,000 milliseconds (3 seconds) before aborting",
+              "    @Lock(LockModeType.PESSIMISTIC_WRITE)",
+              "    @QueryHints({",
+              "        @QueryHint(name = \"jakarta.persistence.lock.timeout\", value = \"3000\")",
+              "    })",
+              "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+              "    Optional<Customer> findByIdWithBoundedWait(@Param(\"id\") Long id);",
+              "}",
+              "",
+              "@Service",
+              "public class CustomerBoundedWaitService {",
+              "    private final CustomerRepository customerRepository;",
+              "",
+              "    public CustomerBoundedWaitService(CustomerRepository customerRepository) {",
+              "        this.customerRepository = customerRepository;",
+              "    }",
+              "",
+              "    // Thread A holds the lock for a long 10 seconds",
+              "    @Transactional",
+              "    public void lockAndHoldTenSeconds(Long id) {",
+              "        customerRepository.findByIdForUpdate(id).orElseThrow();",
+              "        try { Thread.sleep(10000); } catch (InterruptedException e) {}",
+              "    }",
+              "",
+              "    // Thread B waits up to 3,000ms (3 seconds), then gives up",
+              "    @Transactional",
+              "    public void tryUpdateWithBoundedWait(Long id, String newName) {",
+              "        System.out.println(\"Thread B waiting up to 3,000ms (3s) for lock...\");",
+              "        Customer c = customerRepository.findByIdWithBoundedWait(id).orElseThrow();",
+              "        c.setName(newName);",
+              "    }",
+              "}",
+              "",
+              "@Component",
+              "public class BoundedWaitRunner implements CommandLineRunner {",
+              "    private final CustomerBoundedWaitService service;",
+              "    public BoundedWaitRunner(CustomerBoundedWaitService s) { this.service = s; }",
+              "",
+              "    @Override",
+              "    public void run(String... args) throws Exception {",
+              "        ExecutorService executor = Executors.newFixedThreadPool(2);",
+              "        executor.submit(() -> service.lockAndHoldTenSeconds(1L));",
+              "",
+              "        Thread.sleep(500);",
+              "",
+              "        executor.submit(() -> {",
+              "            try {",
+              "                service.tryUpdateWithBoundedWait(1L, \"Charlie\");",
+              "            } catch (Exception e) {",
+              "                System.out.println(\"Thread B timed out after 3s: \" + e.getClass().getSimpleName());",
+              "            }",
+              "        });",
+              "        executor.shutdown();",
+              "    }",
+              "}"
+            ],
+            steps: [
+              {
+                title: "Setting `lock.timeout = \"3000\"` (3,000 Milliseconds)",
+                lines: [7, 13],
+                sql: "SET LOCAL lock_timeout = 3000;\nSELECT c.id, c.name, c.status, c.balance, c.version\nFROM customer c WHERE c.id = ? FOR UPDATE;",
+                timeline: "• Unit is **milliseconds**: `3000` = 3.0 seconds maximum wait.",
+                explanation: "Passing `\"3000\"` tells the persistence provider to wait up to 3,000 milliseconds for the row lock to become free before aborting."
+              },
+              {
+                title: "Thread A Locks Customer #1 for 10 Seconds",
+                lines: [24, 29],
+                sql: "SELECT ... FROM customer WHERE id = 1 FOR UPDATE;\n-- Sleeps 10,000ms",
+                timeline: "• 00.0s – 10.0s: Thread A holds the lock for 10 seconds.",
+                explanation: "Thread A acquires the exclusive lock on Customer #1 and sleeps for 10,000ms—longer than Thread B's 3,000ms patience window."
+              },
+              {
+                title: "Thread B Waits 3 Seconds, Then Aborts with Timeout Exception",
+                lines: [31, 37],
+                sql: "-- Waits 3,000ms...\n-- ERROR: canceling statement due to lock timeout",
+                timeline: "• 00.5s: Thread B starts waiting at `findByIdWithBoundedWait(1L)`.\n• 03.5s: Exactly 3,000ms later, the database aborts Thread B's query and throws `PessimisticLockingFailureException`!",
+                explanation: "If Thread A had finished in 2 seconds, Thread B would have acquired the lock at 2.0s and succeeded. Because Thread A takes 10 seconds, Thread B gives up at the 3.5s mark."
+              }
+            ]
+          }
+        }
+      },
+
+      // ------------------------------------------------------------------------
+      // TAB 5: @Version Lock (Standard Optimistic Locking & Exception Handling)
+      // ------------------------------------------------------------------------
+      version_lock: {
+        title: "5. @Version Lock — Standard Optimistic Locking & Exception Handling",
+        badge: "UPDATE ... WHERE id=? AND version=?",
+        whenToUse: "Use for high-read, low-write scenarios or when human users spend time reviewing data on screen before clicking Save. Zero database locks are held during reads!",
+        goldenRule: "How to handle ObjectOptimisticLockingFailureException: (1) For Human UI edits -> Return HTTP 409 Conflict so the user refreshes and doesn't blindly overwrite someone else's edits. (2) For Machine math (e.g. adding refund balance) -> Use @Retryable to re-read the new version and retry.",
+        pitfallTitle: "How Hibernate Detects Conflicts Without Database Locks",
+        pitfallText: "Both Thread A (slow, 5s) and Thread B (fast, 1s) read Customer #1 with `version = 0`. Thread B wakes up at 1s and executes `UPDATE customer SET balance=125, version=1 WHERE id=1 AND version=0` (1 row updated -> DB version is now 1). At 5s, Thread A wakes up and executes `UPDATE customer SET balance=150, version=1 WHERE id=1 AND version=0`. Because DB version is now 1, `WHERE version=0` matches **0 rows**! Hibernate sees 0 rows updated and immediately throws `ObjectOptimisticLockingFailureException`.",
+        filename: "OptimisticVersionLockCustomerDemo.java",
+        code: [
+          "@Service",
+          "public class CustomerOptimisticService {",
+          "    private final CustomerRepository customerRepository;",
+          "",
+          "    public CustomerOptimisticService(CustomerRepository customerRepository) {",
+          "        this.customerRepository = customerRepository;",
+          "    }",
+          "",
+          "    // CASE A: Standard Optimistic Update (No @Lock annotation needed on Repository!)",
+          "    @Transactional",
+          "    public void updateCustomerOptimistically(Long id, String newName, int sleepMillis) {",
+          "        // 1. Read Customer & current version (NO database lock held!)",
+          "        Customer customer = customerRepository.findById(id).orElseThrow();",
+          "        System.out.println(Thread.currentThread().getName() + \" read version: \" + customer.getVersion());",
+          "",
+          "        // 2. Simulate user think-time or calculation",
+          "        try { Thread.sleep(sleepMillis); } catch (InterruptedException e) {}",
+          "",
+          "        // 3. Modify & flush. Hibernate appends: WHERE id = ? AND version = ?",
+          "        customer.setName(newName);",
+          "        customerRepository.saveAndFlush(customer);",
+          "    }",
+          "",
+          "    // CASE B: Machine-Driven Balance Update -> Automatically Retry on Conflict!",
+          "    @Retryable(",
+          "        retryFor = ObjectOptimisticLockingFailureException.class,",
+          "        maxAttempts = 3,",
+          "        backoff = @Backoff(delay = 100)",
+          "    )",
+          "    @Transactional",
+          "    public void creditRefundToBalanceWithRetry(Long customerId, Double refundAmount) {",
+          "        Customer customer = customerRepository.findById(customerId).orElseThrow();",
+          "        customer.setBalance(customer.getBalance() + refundAmount);",
+          "        customerRepository.saveAndFlush(customer);",
+          "    }",
+          "}",
+          "",
+          "// CASE C: Human-Driven Profile Edit -> Return HTTP 409 Conflict (Do NOT auto-retry!)",
+          "@RestControllerAdvice",
+          "public class OptimisticExceptionHandler {",
+          "    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)",
+          "    public ResponseEntity<String> handleConflict(ObjectOptimisticLockingFailureException ex) {",
+          "        return ResponseEntity.status(HttpStatus.CONFLICT)",
+          "            .body(\"Record was modified by another user. Please refresh and try again.\");",
+          "    }",
+          "}"
+        ],
+        steps: [
+          {
+            title: "Reading Without Database Locks (`findById`)",
+            lines: [10, 15],
+            sql: "SELECT id, name, status, balance, version\nFROM customer\nWHERE id = 1;\n-- Both Thread A (Slow) and Thread B (Fast) read version = 0!",
+            timeline: "• 00.0s: Thread-A-(Slow) reads Customer #1 (`version = 0`).\n• 00.5s: Thread-B-(Fast) reads Customer #1 (`version = 0`).\n• Zero blocking!",
+            explanation: "With `@Version` on the `Customer` entity, you do not need any `@Lock` annotation on the repository. Both threads read the row simultaneously and store `version = 0` in their respective Persistence Contexts."
+          },
+          {
+            title: "Atomic Version Check at Flush (`WHERE id=? AND version=?`)",
+            lines: [19, 22],
+            sql: "-- 1.5s: Thread-B-(Fast) executes:\nUPDATE customer SET name='Bob', version=1 WHERE id=1 AND version=0;\n-- -> 1 row updated! DB version is now 1.\n\n-- 5.0s: Thread-A-(Slow) wakes up and executes:\nUPDATE customer SET name='Alice', version=1 WHERE id=1 AND version=0;\n-- -> 0 rows updated! (Because DB version is 1, not 0!)",
+            timeline: "• 01.5s: Thread-B succeeds and increments DB `version` to `1`.\n• 05.0s: Thread-A's `UPDATE` matches 0 rows -> Hibernate throws `ObjectOptimisticLockingFailureException` and rolls back Thread-A!",
+            explanation: "Hibernate never checks the version beforehand—it performs the check **atomically inside the `UPDATE` statement's `WHERE` clause**. When the JDBC driver reports `0 rows affected`, Hibernate knows another transaction modified the row first."
+          },
+          {
+            title: "Handling Strategy 1: `@Retryable` for Machine Calculations",
+            lines: [24, 35],
+            sql: "-- Attempt 1 fails (version mismatch) -> Rollback\n-- Wait 100ms (@Backoff)\n-- Attempt 2 fetches fresh Customer (version = 1, updated balance) -> Adds refundAmount -> Succeeds!",
+            timeline: "• Ideal when adding a `refundAmount` to `customer.getBalance()` where the mathematical intent ('add $50') remains valid regardless of starting balance.",
+            explanation: "When a background worker is simply adding funds to `Customer.balance`, use Spring Retry (`@Retryable`). On conflict, Spring rolls back the transaction, waits 100ms, re-invokes the method, fetches the fresh `version = 1` balance, and adds the refund cleanly."
+          },
+          {
+            title: "Handling Strategy 2: `HTTP 409 Conflict` for Human UI Edits",
+            lines: [38, 46],
+            sql: "HTTP/1.1 409 Conflict\n\"Record was modified by another user. Please refresh and try again.\"",
+            timeline: "• Never auto-retry form submissions made by humans, or Alice's stale form will silently overwrite Bob's changes!",
+            explanation: "If two support agents open the same Customer profile screen and edit fields, catching `ObjectOptimisticLockingFailureException` in a `@RestControllerAdvice` and returning `409 Conflict` prevents silent data loss."
+          }
+        ]
+      },
+
+      // ------------------------------------------------------------------------
+      // TAB 6: LockModeType.OPTIMISTIC (Cross-Entity: Where @Version Fails & Optimistic Wins)
+      // ------------------------------------------------------------------------
+      optimistic_strict: {
+        title: "6. @Lock(LockModeType.OPTIMISTIC) — Cross-Entity Read Verification",
+        badge: "SELECT version FROM customer WHERE id = ?",
+        whenToUse: "Use when your transaction reads a parent entity (`Customer`) to validate a business rule (`status == 'ACTIVE'`) and inserts/modifies a child entity (`Refund`), WITHOUT modifying the `Customer` itself.",
+        goldenRule: "Three Mandatory Rules: (1) Parent entity (`Customer`) MUST have `@Version`. (2) Service method MUST be `@Transactional`. (3) Use on read-only parent dependencies whose state governs side-effects in other tables.",
+        pitfallTitle: "Why Standard `@Version` FAILS Here, and `@Lock(LockModeType.OPTIMISTIC)` WINS!",
+        pitfallText: "Business Rule: 'Only ACTIVE Customers can receive a Refund.' Thread A reads Customer #1 (`ACTIVE`, `version = 0`) and takes 4 seconds to create a `Refund` row. Meanwhile, Thread B (Admin) suspends Customer #1 (`status = 'SUSPENDED'`, `version = 1`). Because Thread A only inserts into the `refund` table and NEVER updates the `customer` table, standard `@Version` never checks Customer #1's version—allowing a refund to a suspended fraudster! Adding `@Lock(LockModeType.OPTIMISTIC)` forces Hibernate to execute `SELECT version FROM customer WHERE id = 1` right before commit, catching the version change (`1 != 0`) and rolling back the `Refund`!",
+        filename: "CrossEntityOptimisticLockDemo.java",
+        code: [
+          "public interface CustomerRepository extends JpaRepository<Customer, Long> {",
+          "",
+          "    // Forces Hibernate to re-verify Customer.version at transaction commit time,",
+          "    // EVEN IF the Customer entity itself was only read and never modified!",
+          "    @Lock(LockModeType.OPTIMISTIC)",
+          "    @Query(\"SELECT c FROM Customer c WHERE c.id = :id\")",
+          "    Optional<Customer> findByIdStrictOptimistic(@Param(\"id\") Long id);",
+          "}",
+          "",
+          "@Service",
+          "public class BillingService {",
+          "    private final CustomerRepository customerRepo;",
+          "    private final RefundRepository refundRepo;",
+          "",
+          "    public BillingService(CustomerRepository customerRepo, RefundRepository refundRepo) {",
+          "        this.customerRepo = customerRepo;",
+          "        this.refundRepo = refundRepo;",
+          "    }",
+          "",
+          "    // THREAD A: Automated Refund System (Reads Customer, Inserts Child Refund)",
+          "    @Transactional",
+          "    public void issueRefund(Long customerId, Double amount) {",
+          "        // Phase 1 (Read): Normal SELECT. Stores Customer (version = 0) in L1 Cache.",
+          "        Customer customer = customerRepo.findByIdStrictOptimistic(customerId).orElseThrow();",
+          "",
+          "        if (!\"ACTIVE\".equals(customer.getStatus())) {",
+          "            throw new IllegalStateException(\"Cannot refund a SUSPENDED customer!\");",
+          "        }",
+          "        System.out.println(\"Customer is ACTIVE (v=\" + customer.getVersion() + \"). Processing...\");",
+          "",
+          "        // Phase 2 (Processing): Simulate 4s bank API call while Admin suspends customer",
+          "        try { Thread.sleep(4000); } catch (InterruptedException e) {}",
+          "",
+          "        // Create child Refund record (Notice: We NEVER modify Customer!)",
+          "        Refund refund = new Refund();",
+          "        refund.setCustomer(customer);",
+          "        refund.setAmount(amount);",
+          "        refund.setStatus(\"PENDING\");",
+          "        refundRepo.save(refund);",
+          "",
+          "        System.out.println(\"Refund saved. Attempting to commit transaction...\");",
+          "        // Phase 3 (Commit Verification): Hibernate runs SELECT version FROM customer WHERE id=1!",
+          "    }",
+          "",
+          "    // THREAD B: Admin User (Suspends Customer while Thread A is in Phase 2)",
+          "    @Transactional",
+          "    public void suspendCustomer(Long customerId) {",
+          "        Customer customer = customerRepo.findById(customerId).orElseThrow();",
+          "        customer.setStatus(\"SUSPENDED\");",
+          "        customerRepo.saveAndFlush(customer); // Increments Customer version 0 -> 1 in DB!",
+          "        System.out.println(\"Admin SUSPENDED customer! DB version is now: \" + customer.getVersion());",
+          "    }",
+          "}"
+        ],
+        steps: [
+          {
+            title: "Repository: `@Lock(LockModeType.OPTIMISTIC)` on Parent Read",
+            lines: [1, 8],
+            sql: "-- At read time (Phase 1), issues a standard non-locking SELECT:\nSELECT c.id, c.name, c.status, c.balance, c.version\nFROM customer c WHERE c.id = ?;",
+            timeline: "• Registers a before-commit verification hook in Hibernate's Persistence Context for this `Customer` instance.",
+            explanation: "Annotating `findByIdStrictOptimistic` with `@Lock(LockModeType.OPTIMISTIC)` tells Hibernate: 'Even if this transaction never modifies this `Customer`, verify that its `version` has not changed before allowing the transaction to commit.'"
+          },
+          {
+            title: "Phase 1 (The Read) & Business Rule Check (`ACTIVE`)",
+            lines: [20, 30],
+            sql: "SELECT id, name, status, balance, version FROM customer WHERE id = 1;\n-- Returns: status = 'ACTIVE', version = 0",
+            timeline: "• 00.0s: Thread A reads Customer #1 (`ACTIVE`, `version = 0`). The `if` check passes.",
+            explanation: "Thread A fetches Customer #1, sees `status` is `\"ACTIVE\"`, and stores `version = 0` in the L1 Persistence Context. No database locks are held."
+          },
+          {
+            title: "Thread B (Admin) Suspends the Customer Mid-Flight",
+            lines: [45, 52],
+            sql: "UPDATE customer SET status = 'SUSPENDED', version = 1\nWHERE id = 1 AND version = 0;\nCOMMIT;",
+            timeline: "• 01.0s (While Thread A is sleeping at line 32): Thread B suspends Customer #1.\n• Customer #1 in the database now has `status = 'SUSPENDED'` and `version = 1`!",
+            explanation: "One second into Thread A's 4-second bank API call, an Admin runs `suspendCustomer(1L)`. Because optimistic locking holds no physical DB locks, Thread B's update succeeds immediately and bumps the database `version` from `0` to `1`."
+          },
+          {
+            title: "Phase 2: Inserting the Child `Refund` (Why `@Version` Alone Fails)",
+            lines: [34, 40],
+            sql: "INSERT INTO refund (amount, status, customer_id) VALUES (50.0, 'PENDING', 1);\n-- Notice: Zero UPDATE statements against the `customer` table!",
+            timeline: "• 04.0s: Thread A wakes up and inserts the `Refund` row.\n• WITHOUT `LockModeType.OPTIMISTIC`: The transaction would commit right here, illegally issuing a $50 refund to a `SUSPENDED` customer!",
+            explanation: "Thread A creates and saves a new `Refund` entity. Because `Customer` was never dirtied/modified by Thread A, Hibernate generates an `INSERT INTO refund`, and **no `UPDATE` on `customer`**."
+          },
+          {
+            title: "Phase 3 (Commit Verification): Hibernate Catches the Version Mismatch!",
+            lines: [41, 43],
+            sql: "-- Right before COMMIT, Hibernate automatically executes:\nSELECT version FROM customer WHERE id = 1;\n-- DB returns version = 1 (Expected version = 0 in L1 cache!)\n-- MISMATCH DETECTED -> ROLLBACK TRANSACTION!",
+            timeline: "• 04.0s: Hibernate runs `SELECT version FROM customer WHERE id = 1`, sees `1 != 0`, throws `ObjectOptimisticLockingFailureException`, and rolls back the `INSERT INTO refund`!",
+            explanation: "Right before committing the transaction, Hibernate triggers its `LockModeType.OPTIMISTIC` hook and queries `SELECT version FROM customer WHERE id = 1`. Seeing that the version changed from `0` to `1`, it aborts the commit and rolls back the `Refund` insert!"
+          }
+        ]
+      }
+    };
+
+    // ==========================================================================
+    // HELPER: GET ACTIVE SCENARIO DATA
+    // ==========================================================================
+    function getActiveScenarioData() {
+      if (currentTabKey === 'query_hints') {
+        return LOCK_SCENARIOS.query_hints.submodes[currentHintSubmode];
+      }
+      return LOCK_SCENARIOS[currentTabKey];
+    }
+
+    // ==========================================================================
+    // SYNTAX HIGHLIGHTER FOR JAVA CODE LINES
+    // ==========================================================================
+    function highlightJavaLine(rawLine) {
+      // Escape HTML entities first
+      let escaped = rawLine
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      // Check if full line or trailing comment
+      let commentPart = "";
+      const commentIdx = findCommentIndex(escaped);
+      let codePart = escaped;
+      if (commentIdx !== -1) {
+        codePart = escaped.slice(0, commentIdx);
+        commentPart = `<span class="tok-com">${escaped.slice(commentIdx)}</span>`;
+      }
+
+      // Tokenize strings, annotations, keywords, types, numbers safely using placeholders
+      const tokens = [];
+      const saveToken = (html) => {
+        const id = `___TOK_${tokens.length}___`;
+        tokens.push(html);
+        return id;
+      };
+
+      // 1. Strings
+      codePart = codePart.replace(/"([^"\\]|\\.)*"/g, (m) => saveToken(`<span class="tok-str">${m}</span>`));
+
+      // 2. Annotations (@Lock, @Transactional, @Version, @QueryHints, @QueryHint, @Entity, etc.)
+      codePart = codePart.replace(/@[A-Za-z_][A-Za-z0-9_]*/g, (m) => saveToken(`<span class="tok-ann">${m}</span>`));
+
+      // 3. Java Keywords
+      codePart = codePart.replace(/\b(package|import|public|private|protected|class|interface|extends|implements|return|new|if|else|try|catch|throws|throw|void|final|this)\b/g,
+        (m) => saveToken(`<span class="tok-kw">${m}</span>`)
+      );
+
+      // 4. Common Types & Lock Constants
+      codePart = codePart.replace(/\b(Customer|Refund|CustomerRepository|RefundRepository|JpaRepository|Optional|Long|String|Double|LockModeType|PESSIMISTIC_WRITE|PESSIMISTIC_READ|OPTIMISTIC|OPTIMISTIC_FORCE_INCREMENT|ExecutorService|Executors|CommandLineRunner|Thread|InterruptedException|Exception|ObjectOptimisticLockingFailureException|ResponseEntity|HttpStatus|GenerationType|FetchType)\b/g,
+        (m) => saveToken(`<span class="tok-type">${m}</span>`)
+      );
+
+      // 5. Numeric literals
+      codePart = codePart.replace(/\b(\d+L?|\d+\.\d+)\b/g, (m) => saveToken(`<span class="tok-num">${m}</span>`));
+
+      // Restore placeholders
+      tokens.forEach((html, idx) => {
+        codePart = codePart.replace(`___TOK_${idx}___`, html);
+      });
+
+      return codePart + commentPart;
+    }
+
+    function findCommentIndex(str) {
+      let inQuotes = false;
+      for (let i = 0; i < str.length - 1; i++) {
+        if (str[i] === '"' && (i === 0 || str[i - 1] !== '\\')) {
+          inQuotes = !inQuotes;
+        }
+        if (!inQuotes && str[i] === '/' && str[i + 1] === '/') {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    // ==========================================================================
+    // RENDER FUNCTIONS
+    // ==========================================================================
+    function renderAll() {
+      stopReadAloud();
+      const scenario = getActiveScenarioData();
+
+      // Update active nav tab button
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeTabBtn = document.getElementById(`tab-btn-${currentTabKey}`);
+      if (activeTabBtn) activeTabBtn.classList.add('active');
+
+      // Show/Hide Overview Matrix (Tab 1)
+      const matrixSec = document.getElementById('overview-matrix-section');
+      if (currentTabKey === 'overview') {
+        matrixSec.classList.remove('hidden');
+      } else {
+        matrixSec.classList.add('hidden');
+      }
+
+      // Show/Hide Submode Selector (Tab 4: QueryHints)
+      const submodeBar = document.getElementById('submode-bar');
+      if (currentTabKey === 'query_hints') {
+        submodeBar.classList.remove('hidden');
+        document.querySelectorAll('.submode-btn').forEach(b => b.classList.remove('active'));
+        const activeSubBtn = document.getElementById(`subbtn-${currentHintSubmode}`);
+        if (activeSubBtn) activeSubBtn.classList.add('active');
+      } else {
+        submodeBar.classList.add('hidden');
+      }
+
+      // Render Top Scenario Summary Banner
+      const headerCard = document.getElementById('scenario-header-card');
+      headerCard.innerHTML = `
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="space-y-1.5">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold" style="background: var(--badge-sql-bg); color: var(--badge-sql-text);">
+                ${scenario.badge}
+              </span>
+              <span class="text-xs font-semibold" style="color: var(--text-muted);">
+                Tables: <code>customer</code> &amp; <code>refund</code>
+              </span>
+            </div>
+            <h2 class="text-lg sm:text-xl font-extrabold tracking-tight">${scenario.title}</h2>
+            <p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
+              <strong>When to Use:</strong> ${scenario.whenToUse}
+            </p>
+          </div>
+          <div class="lg:max-w-md w-full rounded-xl p-3.5 surface-tertiary border text-xs leading-relaxed">
+            <div class="font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5" style="color: var(--accent-secondary);">
+              <span>📌 Golden Implementation Rule</span>
+            </div>
+            <p style="color: var(--text-primary);">${scenario.goldenRule}</p>
+          </div>
+        </div>
+      `;
+
+      // Render Filename
+      document.getElementById('code-filename').textContent = scenario.filename;
+
+      // Render Pitfall / Architectural Insight Box
+      const pitfallBox = document.getElementById('scenario-pitfall-box');
+      pitfallBox.innerHTML = `
+        <div class="text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5" style="color: var(--badge-warn-text);">
+          <span>💡 Key Observation &amp; Deep Dive</span>
+        </div>
+        <h4 class="text-sm font-bold mb-1">${scenario.pitfallTitle}</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">${scenario.pitfallText}</p>
+      `;
+
+      // Render Code Lines & Current Step
+      renderCodeAndStep();
+    }
+
+    function renderCodeAndStep() {
+      const scenario = getActiveScenarioData();
+      const steps = scenario.steps;
+      if (currentStepIndex >= steps.length) currentStepIndex = 0;
+      if (currentStepIndex < 0) currentStepIndex = 0;
+
+      const activeStep = steps[currentStepIndex];
+      const [startLine, endLine] = activeStep.lines;
+
+      // 1. Render Code Lines with Line Numbers & Highlighting
+      const codeWrapper = document.getElementById('code-lines-wrapper');
+      const htmlLines = scenario.code.map((lineText, idx) => {
+        const lineNumber = idx + 1;
+        const isHighlighted = lineNumber >= startLine && lineNumber <= endLine;
+        const activeClass = isHighlighted ? 'active-line' : (focusModeEnabled ? 'dimmed-line' : '');
+        return `
+          <div id="code-line-${lineNumber}" onclick="onLineClick(${lineNumber})" class="code-line ${activeClass}" title="Click to jump to explanation for line ${lineNumber}">
+            <span class="line-num">${lineNumber}</span>
+            <span class="line-content">${highlightJavaLine(lineText) || ' '}</span>
+          </div>
+        `;
+      }).join('');
+      codeWrapper.innerHTML = htmlLines;
+
+      // Scroll first active line smoothly into view inside the code container
+      const firstActiveEl = document.getElementById(`code-line-${startLine}`);
+      const scrollContainer = document.getElementById('code-editor-scroll');
+      if (firstActiveEl && scrollContainer) {
+        const offsetTop = firstActiveEl.offsetTop - scrollContainer.offsetTop;
+        scrollContainer.scrollTo({
+          top: Math.max(0, offsetTop - 90),
+          behavior: 'smooth'
+        });
+      }
+
+      // 2. Render Stepper Header Badges & Buttons
+      document.getElementById('step-counter-badge').textContent = `Step ${currentStepIndex + 1} of ${steps.length}`;
+      document.getElementById('step-lines-badge').textContent = `Lines ${startLine}–${endLine}`;
+      document.getElementById('btn-prev-step').disabled = (currentStepIndex === 0);
+      document.getElementById('btn-prev-step').style.opacity = (currentStepIndex === 0) ? '0.45' : '1';
+
+      // Update Next button label when on last step
+      const nextBtn = document.getElementById('btn-next-step');
+      if (currentStepIndex === steps.length - 1) {
+        nextBtn.textContent = '↺ Loop to Step 1';
+      } else {
+        nextBtn.textContent = 'Next ▶';
+      }
+
+      // 3. Render Step Jump Pills
+      const pillsContainer = document.getElementById('step-pills-container');
+      pillsContainer.innerHTML = steps.map((st, idx) => `
+        <button onclick="goToStep(${idx})" class="step-pill px-2.5 py-1 rounded-lg text-xs font-mono ${idx === currentStepIndex ? 'active' : ''}">
+          #${idx + 1} (L${st.lines[0]}–${st.lines[1]})
+        </button>
+      `).join('');
+
+      // 4. Render Step Explanation Content
+      document.getElementById('step-title').textContent = `${currentStepIndex + 1}. ${activeStep.title}`;
+      document.getElementById('step-explanation').innerHTML = `<p>${activeStep.explanation}</p>`;
+      document.getElementById('step-lock-mode-pill').textContent = scenario.badge;
+      document.getElementById('step-sql-box').textContent = activeStep.sql;
+      document.getElementById('step-timeline-box').innerHTML = activeStep.timeline
+        .split('\n')
+        .map(line => `<div>${line}</div>`)
+        .join('');
+    }
+
+    // ==========================================================================
+    // INTERACTIVE NAVIGATION ACTIONS
+    // ==========================================================================
+    function switchTab(tabKey) {
+      currentTabKey = tabKey;
+      currentStepIndex = 0;
+      renderAll();
+    }
+
+    function switchHintSubmode(submodeKey) {
+      currentHintSubmode = submodeKey;
+      currentStepIndex = 0;
+      renderAll();
+    }
+
+    function nextStep() {
+      const steps = getActiveScenarioData().steps;
+      if (currentStepIndex < steps.length - 1) {
+        currentStepIndex++;
+      } else {
+        currentStepIndex = 0;
+      }
+      renderCodeAndStep();
+      if (isReadingAloud) speakCurrentStep();
+    }
+
+    function prevStep() {
+      if (currentStepIndex > 0) {
+        currentStepIndex--;
+        renderCodeAndStep();
+        if (isReadingAloud) speakCurrentStep();
+      }
+    }
+
+    function resetStep() {
+      currentStepIndex = 0;
+      renderCodeAndStep();
+    }
+
+    function goToStep(idx) {
+      currentStepIndex = idx;
+      renderCodeAndStep();
+      if (isReadingAloud) speakCurrentStep();
+    }
+
+    function onLineClick(lineNumber) {
+      const steps = getActiveScenarioData().steps;
+      const matchingIdx = steps.findIndex(st => lineNumber >= st.lines[0] && lineNumber <= st.lines[1]);
+      if (matchingIdx !== -1) {
+        currentStepIndex = matchingIdx;
+        renderCodeAndStep();
+      }
+    }
+
+    function toggleHighlightFilter() {
+      focusModeEnabled = !focusModeEnabled;
+      const btn = document.getElementById('btn-dim-toggle');
+      btn.textContent = focusModeEnabled ? '🎯 Focus Mode: ON' : '🎯 Focus Mode: OFF';
+      renderCodeAndStep();
+    }
+
+    // ==========================================================================
+    // COPY CODE TO CLIPBOARD (IFRAME SAFE)
+    // ==========================================================================
+    function copyCurrentCode() {
+      const scenario = getActiveScenarioData();
+      const rawCode = scenario.code.join('\n');
+
+      const textArea = document.createElement('textarea');
+      textArea.value = rawCode;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        const copyText = document.getElementById('copy-text');
+        const copyIcon = document.getElementById('copy-icon');
+        copyText.textContent = 'Copied!';
+        copyIcon.textContent = '✅';
+        setTimeout(() => {
+          copyText.textContent = 'Copy Code';
+          copyIcon.textContent = '📋';
+        }, 1800);
+      } catch (err) {
+        console.error('Copy failed', err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+
+    // ==========================================================================
+    // THEME, FONT SIZE, FULLSCREEN & READ ALOUD UTILITIES
+    // ==========================================================================
+    function setTheme(themeName) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      ['light', 'dark', 'sepia'].forEach(t => {
+        const btn = document.getElementById(`theme-btn-${t}`);
+        if (btn) {
+          if (t === themeName) {
+            btn.style.backgroundColor = 'var(--accent-primary)';
+            btn.style.color = '#ffffff';
+          } else {
+            btn.style.backgroundColor = 'transparent';
+            btn.style.color = 'var(--text-secondary)';
+          }
+        }
+      });
+    }
+
+    function adjustFontSize(delta) {
+      currentFontSize = Math.min(22, Math.max(13, currentFontSize + delta));
+      document.documentElement.style.setProperty('--base-font-size', `${currentFontSize}px`);
+      document.getElementById('font-size-label').textContent = `${currentFontSize}px`;
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    function toggleReadAloud() {
+      if (!('speechSynthesis' in window)) return;
+      if (isReadingAloud) {
+        stopReadAloud();
+      } else {
+        isReadingAloud = true;
+        document.getElementById('tts-icon').textContent = '⏹️';
+        document.getElementById('tts-label').textContent = 'Stop Reading';
+        speakCurrentStep();
+      }
+    }
+
+    function speakCurrentStep() {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const scenario = getActiveScenarioData();
+      const step = scenario.steps[currentStepIndex];
+      const textToSpeak = `${scenario.title}. Step ${currentStepIndex + 1}: ${step.title}. ${step.explanation}`;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate = 1.0;
+      utterance.onend = () => {
+        isReadingAloud = false;
+        document.getElementById('tts-icon').textContent = '🔊';
+        document.getElementById('tts-label').textContent = 'Read Aloud';
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopReadAloud() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isReadingAloud = false;
+      const icon = document.getElementById('tts-icon');
+      const label = document.getElementById('tts-label');
+      if (icon) icon.textContent = '🔊';
+      if (label) label.textContent = 'Read Aloud';
+    }
+
+    // Keyboard Arrow Navigation Support
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextStep();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevStep();
+      }
+    });
+
+    // Initialize App on Load
+    window.onload = function () {
+      setTheme('dark');
+      renderAll();
+    };
+  </script>
+</body>
+</html>
